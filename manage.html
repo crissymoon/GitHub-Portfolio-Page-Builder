@@ -374,6 +374,14 @@
     <input type="text" id="deploy-domain" placeholder="example.com" oninput="updateLiveUrl()" style="width:100%;">
   </div>
   <div id="deploy-live-url" style="margin-bottom:0.75rem;font-size:0.85rem;color:#666;"></div>
+
+  <div id="deploy-info-panel" style="display:none;margin-bottom:0.75rem;padding:0.75rem;border:1px solid #ddd;background:#fafafa;font-size:0.85rem;">
+    <div id="deploy-repo-status" style="margin-bottom:0.5rem;font-weight:600;"></div>
+    <div id="deploy-remote-files" style="margin-bottom:0.5rem;"></div>
+    <div id="deploy-build-files"></div>
+  </div>
+
+  <button onclick="checkDeployRepo()" style="margin-bottom:0.25rem;">Check Repo</button>
   <button class="primary-btn" onclick="saveDeployConfig()">Save Deploy Settings</button>
   <button class="primary-btn" onclick="deployPortfolio()">Save, Build + Deploy</button>
   <span id="deploy-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
@@ -767,8 +775,83 @@
               document.getElementById("deploy-domain").value = cfg.domain;
             }
             updateLiveUrl();
+            if (cfg.repo) {
+              checkDeployRepo();
+            }
           } catch (e) {}
         }
+      };
+      xhr.send();
+    }
+
+    function checkDeployRepo() {
+      var repo = document.getElementById("deploy-repo-url").value.trim();
+      if (!repo) {
+        document.getElementById("deploy-status").textContent = "Enter a repo URL first.";
+        return;
+      }
+      var panel = document.getElementById("deploy-info-panel");
+      var statusDiv = document.getElementById("deploy-repo-status");
+      var remoteDiv = document.getElementById("deploy-remote-files");
+      var buildDiv = document.getElementById("deploy-build-files");
+
+      panel.style.display = "block";
+      statusDiv.textContent = "Checking repo...";
+      remoteDiv.textContent = "";
+      buildDiv.textContent = "";
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/api/deploy-check", true);
+      xhr.timeout = 30000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          try {
+            var info = JSON.parse(xhr.responseText);
+
+            /* Repo status */
+            if (info.repoExists) {
+              var msg = "Repo found: " + info.remote.length + " file" + (info.remote.length !== 1 ? "s" : "") + " currently deployed.";
+              if (info.remoteCname) {
+                msg += " CNAME: " + info.remoteCname;
+              }
+              statusDiv.style.color = "#2a7a2a";
+              statusDiv.textContent = msg;
+            } else {
+              statusDiv.style.color = "#b85c00";
+              statusDiv.textContent = "Repo not found or empty. First deploy will initialize it.";
+            }
+
+            /* Remote files */
+            if (info.remote.length > 0) {
+              remoteDiv.innerHTML = "<strong>Currently in repo:</strong> " + info.remote.map(function (f) {
+                return "<span style='display:inline-block;padding:0.1rem 0.4rem;margin:0.1rem;background:#e8e8e8;font-family:monospace;font-size:0.8rem;'>" + esc(f) + "</span>";
+              }).join("");
+            } else {
+              remoteDiv.textContent = "";
+            }
+
+            /* Build files to push */
+            if (info.hasBuild && info.build.length > 0) {
+              buildDiv.innerHTML = "<strong>Files to deploy:</strong> " + info.build.map(function (f) {
+                return "<span style='display:inline-block;padding:0.1rem 0.4rem;margin:0.1rem;background:#d9ecd9;font-family:monospace;font-size:0.8rem;'>" + esc(f) + "</span>";
+              }).join("");
+            } else {
+              buildDiv.innerHTML = "<strong>No build/ directory found.</strong> Run Build first.";
+              buildDiv.style.color = "#b85c00";
+            }
+          } catch (e) {
+            statusDiv.textContent = "Error parsing check response.";
+            statusDiv.style.color = "#c00";
+          }
+        } else {
+          statusDiv.textContent = "Check failed.";
+          statusDiv.style.color = "#c00";
+        }
+      };
+      xhr.ontimeout = function () {
+        statusDiv.textContent = "Check timed out.";
+        statusDiv.style.color = "#c00";
       };
       xhr.send();
     }

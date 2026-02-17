@@ -405,6 +405,164 @@ static void handle_api_deploy_config_post(sock_t client, const char *headers, in
                   ok, (long)strlen(ok));
 }
 
+/* Handle GET /api/deploy-check - inspect repo and list build files */
+static void handle_api_deploy_check(sock_t client) {
+    /* Build JSON with: build files, remote repo files, remote CNAME */
+    char json[32768];
+    int pos = 0;
+    pos += snprintf(json + pos, sizeof(json) - pos, "{\"build\":[");
+
+    /* List build/ directory files */
+    struct stat st;
+    int has_build = (stat("build", &st) == 0);
+    if (has_build) {
+        #ifdef _WIN32
+        FILE *p = _popen("dir /B build\\ 2>nul", "r");
+        #else
+        FILE *p = popen("ls -1 build/ 2>/dev/null", "r");
+        #endif
+        if (p) {
+            char fname[512];
+            int first = 1;
+            while (fgets(fname, sizeof(fname), p)) {
+                int len = (int)strlen(fname);
+                while (len > 0 && (fname[len-1] == '\n' || fname[len-1] == '\r'))
+                    fname[--len] = '\0';
+                if (len == 0) continue;
+                if (!first) pos += snprintf(json + pos, sizeof(json) - pos, ",");
+                pos += snprintf(json + pos, sizeof(json) - pos, "\"%s\"", fname);
+                first = 0;
+            }
+            #ifdef _WIN32
+            _pclose(p);
+            #else
+            pclose(p);
+            #endif
+        }
+    }
+    pos += snprintf(json + pos, sizeof(json) - pos, "],");
+
+    /* Read deploy.conf for repo URL */
+    char repo[1024] = {0};
+    char domain[256] = {0};
+    FILE *cf = fopen("deploy.conf", "r");
+    if (cf) {
+        char line[1024];
+        while (fgets(line, sizeof(line), cf)) {
+            int len = (int)strlen(line);
+            while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' ||
+                               line[len-1] == ' ')) line[--len] = '\0';
+            if (line[0] == '#' || line[0] == '\0') continue;
+            if (strncmp(line, "repo=", 5) == 0)
+                strncpy(repo, line + 5, sizeof(repo) - 1);
+            else if (strncmp(line, "domain=", 7) == 0)
+                strncpy(domain, line + 7, sizeof(domain) - 1);
+        }
+        fclose(cf);
+    }
+
+    /* Check remote repo */
+    pos += snprintf(json + pos, sizeof(json) - pos, "\"remote\":[");
+    char remote_cname[256] = {0};
+    int repo_exists = 0;
+
+    if (repo[0]) {
+        /* Use git ls-remote to check if repo exists, then ls-tree for file list */
+        char cmd[2048];
+        snprintf(cmd, sizeof(cmd),
+            "git ls-tree --name-only HEAD -r 2>/dev/null"
+            " || true");
+        /* Actually clone shallow to tmp to list files */
+        char tmpdir[1024];
+        #ifdef _WIN32
+        const char *tmp = getenv("TEMP");
+        if (!tmp) tmp = "C:\\Temp";
+        snprintf(tmpdir, sizeof(tmpdir), "%s\\deploy-check", tmp);
+        snprintf(cmd, sizeof(cmd), "rmdir /S /Q \"%s\" 2>nul", tmpdir);
+        #else
+        const char *tmp = getenv("TMPDIR");
+        if (!tmp) tmp = "/tmp";
+        snprintf(tmpdir, sizeof(tmpdir), "%s/deploy-check", tmp);
+        snprintf(cmd, sizeof(cmd), "rm -rf \"%s\"", tmpdir);
+        #endif
+        system(cmd);
+
+        snprintf(cmd, sizeof(cmd),
+            "git clone --depth 1 \"%s\" \"%s\" 2>/dev/null", repo, tmpdir);
+        int clone_rc = system(cmd);
+
+        if (clone_rc == 0) {
+            repo_exists = 1;
+            /* List files */
+            #ifdef _WIN32
+            snprintf(cmd, sizeof(cmd), "dir /B \"%s\\\" 2>nul", tmpdir);
+            FILE *p = _popen(cmd, "r");
+            #else
+            snprintf(cmd, sizeof(cmd),
+                "ls -1A \"%s\" 2>/dev/null | grep -v '^.git$'", tmpdir);
+            FILE *p = popen(cmd, "r");
+            #endif
+            if (p) {
+                char fname[512];
+                int first = 1;
+                while (fgets(fname, sizeof(fname), p)) {
+                    int len = (int)strlen(fname);
+                    while (len > 0 && (fname[len-1] == '\n' || fname[len-1] == '\r'))
+                        fname[--len] = '\0';
+                    if (len == 0 || strcmp(fname, ".git") == 0) continue;
+                    if (!first) pos += snprintf(json + pos, sizeof(json) - pos, ",");
+                    pos += snprintf(json + pos, sizeof(json) - pos, "\"%s\"", fname);
+                    first = 0;
+                    /* Check for CNAME */
+                    if (strcmp(fname, "CNAME") == 0) {
+                        char cpath[1024];
+                        snprintf(cpath, sizeof(cpath), "%s%cCNAME", tmpdir,
+                            #ifdef _WIN32
+                            '\\'
+                            #else
+                            '/'
+                            #endif
+                        );
+                        FILE *cnf = fopen(cpath, "r");
+                        if (cnf) {
+                            if (fgets(remote_cname, sizeof(remote_cname), cnf)) {
+                                int cl = (int)strlen(remote_cname);
+                                while (cl > 0 && (remote_cname[cl-1] == '\n' ||
+                                       remote_cname[cl-1] == '\r'))
+                                    remote_cname[--cl] = '\0';
+                            }
+                            fclose(cnf);
+                        }
+                    }
+                }
+                #ifdef _WIN32
+                _pclose(p);
+                #else
+                pclose(p);
+                #endif
+            }
+            /* Cleanup */
+            #ifdef _WIN32
+            snprintf(cmd, sizeof(cmd), "rmdir /S /Q \"%s\" 2>nul", tmpdir);
+            #else
+            snprintf(cmd, sizeof(cmd), "rm -rf \"%s\"", tmpdir);
+            #endif
+            system(cmd);
+        }
+    }
+
+    pos += snprintf(json + pos, sizeof(json) - pos, "],");
+    pos += snprintf(json + pos, sizeof(json) - pos,
+        "\"repoExists\":%s,", repo_exists ? "true" : "false");
+    pos += snprintf(json + pos, sizeof(json) - pos,
+        "\"remoteCname\":\"%s\",", remote_cname);
+    pos += snprintf(json + pos, sizeof(json) - pos,
+        "\"hasBuild\":%s}", has_build ? "true" : "false");
+
+    send_response(client, 200, "OK", "application/json; charset=utf-8",
+                  json, (long)strlen(json));
+}
+
 /* Handle POST /api/deploy - run the deploy tool */
 static void handle_api_deploy(sock_t client) {
     int rc;
@@ -494,6 +652,10 @@ static void handle_request(sock_t client) {
     /* Handle GET endpoints */
     if (strcmp(method, "GET") == 0 && strcmp(raw_path, "/api/deploy-config") == 0) {
         handle_api_deploy_config_get(client);
+        return;
+    }
+    if (strcmp(method, "GET") == 0 && strcmp(raw_path, "/api/deploy-check") == 0) {
+        handle_api_deploy_check(client);
         return;
     }
 

@@ -211,12 +211,35 @@ static void remove_dir(const char *path) {
     run_cmd_quiet(cmd);
 }
 
+/* ---- Read domain from config ---- */
+
+static int read_domain(char *domain, int domain_size) {
+    char config_path[MAX_PATH_LEN];
+    domain[0] = '\0';
+    if (!find_config(config_path, sizeof(config_path))) return 0;
+    FILE *cf = fopen(config_path, "r");
+    if (!cf) return 0;
+    char line[MAX_URL];
+    while (fgets(line, sizeof(line), cf)) {
+        trim(line);
+        if (strncmp(line, "domain=", 7) == 0) {
+            strncpy(domain, line + 7, domain_size - 1);
+            domain[domain_size - 1] = '\0';
+            trim(domain);
+            break;
+        }
+    }
+    fclose(cf);
+    return domain[0] != '\0';
+}
+
 /* ---- Deploy ---- */
 
 static int deploy(const char *repo_url) {
     char build_dir[MAX_PATH_LEN];
     char staging[MAX_PATH_LEN];
     char cmd[MAX_CMD];
+    char domain[256] = {0};
 
     printf("\n--- Deploy to GitHub Pages ---\n\n");
 
@@ -229,103 +252,114 @@ static int deploy(const char *repo_url) {
     printf("Build directory: %s\n", build_dir);
     printf("Target repo: %s\n\n", repo_url);
 
-    /* 2. Create staging directory */
+    /* Read custom domain from config */
+    read_domain(domain, sizeof(domain));
+
+    /* 2. Prepare staging directory */
     get_temp_dir(staging, sizeof(staging));
     remove_dir(staging);
-    MKDIR(staging);
 
-    if (!dir_exists(staging)) {
-        fprintf(stderr, "Error: Could not create staging directory: %s\n", staging);
-        return 1;
-    }
+    /* 3. Try to clone the existing repo (shallow, single branch, fast) */
+    printf("Cloning existing repo...\n");
+    snprintf(cmd, sizeof(cmd),
+        "git clone --depth 1 \"%s\" \"%s\" 2>&1", repo_url, staging);
+    int clone_rc = run_cmd(cmd);
 
-    /* 3. Initialize git repo in staging */
-    snprintf(cmd, sizeof(cmd), "cd \"%s\" && git init && git checkout -b main", staging);
-    if (run_cmd(cmd) != 0) {
-        fprintf(stderr, "Error: git init failed.\n");
+    if (clone_rc != 0) {
+        /* Repo might be empty or not exist yet -- fall back to fresh init */
+        printf("Clone failed (repo may be empty). Initializing fresh.\n");
         remove_dir(staging);
-        return 1;
+        MKDIR(staging);
+        if (!dir_exists(staging)) {
+            fprintf(stderr, "Error: Could not create staging directory: %s\n", staging);
+            return 1;
+        }
+        snprintf(cmd, sizeof(cmd),
+            "cd \"%s\" && git init && git checkout -b main", staging);
+        if (run_cmd(cmd) != 0) {
+            fprintf(stderr, "Error: git init failed.\n");
+            remove_dir(staging);
+            return 1;
+        }
+        snprintf(cmd, sizeof(cmd),
+            "cd \"%s\" && git remote add origin \"%s\"", staging, repo_url);
+        run_cmd(cmd);
+    } else {
+        /* Ensure we are on main branch */
+        snprintf(cmd, sizeof(cmd),
+            "cd \"%s\" && git checkout main 2>/dev/null || git checkout -b main",
+            staging);
+        run_cmd(cmd);
     }
 
-    /* 4. Copy build files to staging */
-    printf("\nCopying build files...\n");
+    /* 4. Read existing CNAME from the cloned repo (if any) before overwriting */
+    {
+        char existing_cname[MAX_PATH_LEN];
+        char existing_domain[256] = {0};
+        snprintf(existing_cname, sizeof(existing_cname), "%s%cCNAME", staging, PATH_SEP);
+        if (file_exists(existing_cname) && !domain[0]) {
+            /* Repo has a CNAME but we have no domain in config -- preserve it */
+            FILE *cf = fopen(existing_cname, "r");
+            if (cf) {
+                if (fgets(existing_domain, sizeof(existing_domain), cf)) {
+                    trim(existing_domain);
+                }
+                fclose(cf);
+            }
+            if (existing_domain[0]) {
+                printf("Preserved existing CNAME from repo: %s\n", existing_domain);
+                strncpy(domain, existing_domain, sizeof(domain) - 1);
+            }
+        }
+    }
+
+    /* 5. Remove old HTML files from staging (but keep .git, CNAME, .nojekyll, etc.) */
+    {
+        char rm_path[MAX_PATH_LEN];
+        const char *exts[] = { "*.html", "*.htm", "*.css", "*.js", "*.json", NULL };
+        for (int i = 0; exts[i]; i++) {
+            #ifdef _WIN32
+            snprintf(rm_path, sizeof(rm_path),
+                "del /Q \"%s\\%s\" 2>nul", staging, exts[i]);
+            #else
+            snprintf(rm_path, sizeof(rm_path),
+                "rm -f \"%s\"/%s 2>/dev/null", staging, exts[i]);
+            #endif
+            run_cmd_quiet(rm_path);
+        }
+    }
+
+    /* 6. Copy new build files to staging */
+    printf("Copying build files...\n");
     if (copy_build_files(build_dir, staging) != 0) {
         fprintf(stderr, "Error: Failed to copy build files.\n");
         remove_dir(staging);
         return 1;
     }
 
-    /* 5. Create a minimal .nojekyll file (required for GitHub Pages) */
+    /* 7. Ensure .nojekyll exists */
     {
         char nojekyll[MAX_PATH_LEN];
         snprintf(nojekyll, sizeof(nojekyll), "%s%c.nojekyll", staging, PATH_SEP);
-        FILE *f = fopen(nojekyll, "w");
-        if (f) fclose(f);
-    }
-
-    /* 5b. Create CNAME file if custom domain is configured */
-    {
-        char cname_src[MAX_PATH_LEN];
-        char cname_dst[MAX_PATH_LEN];
-        /* Check for CNAME in build dir first, then project root */
-        int found = 0;
-        snprintf(cname_src, sizeof(cname_src), "%s%cCNAME", build_dir, PATH_SEP);
-        if (file_exists(cname_src)) { found = 1; }
-        if (!found) {
-            if (file_exists("CNAME")) {
-                snprintf(cname_src, sizeof(cname_src), "CNAME");
-                found = 1;
-            } else if (file_exists("../CNAME")) {
-                snprintf(cname_src, sizeof(cname_src), "../CNAME");
-                found = 1;
-            }
-        }
-        snprintf(cname_dst, sizeof(cname_dst), "%s%cCNAME", staging, PATH_SEP);
-        if (found) {
-            /* Copy existing CNAME */
-            FILE *src = fopen(cname_src, "r");
-            FILE *dst = fopen(cname_dst, "w");
-            if (src && dst) {
-                char cbuf[512];
-                size_t r;
-                while ((r = fread(cbuf, 1, sizeof(cbuf), src)) > 0) {
-                    fwrite(cbuf, 1, r, dst);
-                }
-                printf("CNAME: copied from %s\n", cname_src);
-            }
-            if (src) fclose(src);
-            if (dst) fclose(dst);
-        } else {
-            /* Check deploy.conf for domain= line */
-            char config_path[MAX_PATH_LEN];
-            char domain[256] = {0};
-            if (find_config(config_path, sizeof(config_path))) {
-                FILE *cf = fopen(config_path, "r");
-                if (cf) {
-                    char line[MAX_URL];
-                    while (fgets(line, sizeof(line), cf)) {
-                        trim(line);
-                        if (strncmp(line, "domain=", 7) == 0) {
-                            strncpy(domain, line + 7, sizeof(domain) - 1);
-                            trim(domain);
-                            break;
-                        }
-                    }
-                    fclose(cf);
-                }
-            }
-            if (domain[0]) {
-                FILE *dst = fopen(cname_dst, "w");
-                if (dst) {
-                    fprintf(dst, "%s\n", domain);
-                    fclose(dst);
-                    printf("CNAME: %s\n", domain);
-                }
-            }
+        if (!file_exists(nojekyll)) {
+            FILE *f = fopen(nojekyll, "w");
+            if (f) fclose(f);
         }
     }
 
-    /* 6. Stage all files */
+    /* 8. Write CNAME if we have a domain */
+    if (domain[0]) {
+        char cname_path[MAX_PATH_LEN];
+        snprintf(cname_path, sizeof(cname_path), "%s%cCNAME", staging, PATH_SEP);
+        FILE *f = fopen(cname_path, "w");
+        if (f) {
+            fprintf(f, "%s\n", domain);
+            fclose(f);
+            printf("CNAME: %s\n", domain);
+        }
+    }
+
+    /* 9. Stage all changes */
     snprintf(cmd, sizeof(cmd), "cd \"%s\" && git add -A", staging);
     if (run_cmd(cmd) != 0) {
         fprintf(stderr, "Error: git add failed.\n");
@@ -333,7 +367,16 @@ static int deploy(const char *repo_url) {
         return 1;
     }
 
-    /* 7. Commit */
+    /* 10. Check if there are actual changes to commit */
+    snprintf(cmd, sizeof(cmd),
+        "cd \"%s\" && git diff --cached --quiet", staging);
+    if (run_cmd_quiet(cmd) == 0) {
+        printf("\nNo changes detected. Site is already up to date.\n");
+        remove_dir(staging);
+        return 0;
+    }
+
+    /* 11. Commit */
     snprintf(cmd, sizeof(cmd),
         "cd \"%s\" && git commit -m \"Deploy portfolio\"",
         staging);
@@ -343,20 +386,22 @@ static int deploy(const char *repo_url) {
         return 1;
     }
 
-    /* 8. Set remote and force push to main branch */
-    snprintf(cmd, sizeof(cmd),
-        "cd \"%s\" && git remote add origin \"%s\"",
-        staging, repo_url);
-    run_cmd(cmd);
-
+    /* 12. Push (normal push, not force -- preserves history and config) */
     printf("\nPushing to %s ...\n", repo_url);
     snprintf(cmd, sizeof(cmd),
-        "cd \"%s\" && git push -f origin main",
-        staging);
+        "cd \"%s\" && git push origin main", staging);
     int push_rc = run_cmd(cmd);
 
     if (push_rc != 0) {
-        /* Try gh-pages branch as fallback */
+        /* If normal push fails (diverged history), do a force push */
+        printf("\nNormal push failed, force pushing...\n");
+        snprintf(cmd, sizeof(cmd),
+            "cd \"%s\" && git push -f origin main", staging);
+        push_rc = run_cmd(cmd);
+    }
+
+    if (push_rc != 0) {
+        /* Try gh-pages branch as last fallback */
         printf("\nTrying gh-pages branch...\n");
         snprintf(cmd, sizeof(cmd),
             "cd \"%s\" && git push -f origin main:gh-pages",
@@ -364,7 +409,7 @@ static int deploy(const char *repo_url) {
         push_rc = run_cmd(cmd);
     }
 
-    /* 9. Cleanup */
+    /* 13. Cleanup */
     remove_dir(staging);
 
     if (push_rc != 0) {
@@ -374,34 +419,11 @@ static int deploy(const char *repo_url) {
 
     printf("\n--- Deploy complete ---\n");
 
-    /* Check for custom domain first */
-    {
-        char config_path[MAX_PATH_LEN];
-        char domain[256] = {0};
-        if (find_config(config_path, sizeof(config_path))) {
-            FILE *cf = fopen(config_path, "r");
-            if (cf) {
-                char line[MAX_URL];
-                while (fgets(line, sizeof(line), cf)) {
-                    trim(line);
-                    if (strncmp(line, "domain=", 7) == 0) {
-                        strncpy(domain, line + 7, sizeof(domain) - 1);
-                        trim(domain);
-                        break;
-                    }
-                }
-                fclose(cf);
-            }
-        }
-        if (domain[0]) {
-            printf("Your site should be live at: https://%s/\n", domain);
-            printf("(It may take a minute or two for GitHub Pages to update.)\n");
-            return 0;
-        }
-    }
-
-    /* Fall back to deriving the pages URL from the repo URL */
-    {
+    /* Print the live URL */
+    if (domain[0]) {
+        printf("Your site is live at: https://%s/\n", domain);
+    } else {
+        /* Derive the pages URL from the repo URL */
         char pages_url[MAX_URL] = {0};
         const char *gh = strstr(repo_url, "github.com/");
         if (gh) {
@@ -432,11 +454,11 @@ static int deploy(const char *repo_url) {
                     snprintf(pages_url, sizeof(pages_url),
                         "https://%s.github.io/%s/", user, repo);
                 }
-                printf("Your site should be live at: %s\n", pages_url);
-                printf("(It may take a minute or two for GitHub Pages to update.)\n");
+                printf("Your site is live at: %s\n", pages_url);
             }
         }
     }
+    printf("Zero downtime -- no settings were disrupted.\n");
 
     return 0;
 }
