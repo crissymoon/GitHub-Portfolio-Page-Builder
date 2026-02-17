@@ -82,6 +82,19 @@
         "automation",
         "analytics"
       ]
+    },
+    {
+      "id": 5,
+      "displayOrder": 5,
+      "title": "Marketing Plans That Work",
+      "description": "Data-driven marketing plans using an emotional-intelligence framework to audit pages, fix leaks, and align brand messaging. We segment behavior and target precisely—no guesswork, just results.",
+      "url": "",
+      "tags": [
+        "marketing",
+        "strategy",
+        "analytics",
+        "conversion"
+      ]
     }
   ],
   "education": {
