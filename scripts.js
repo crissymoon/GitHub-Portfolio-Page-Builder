@@ -227,6 +227,42 @@
     el.innerHTML = html;
   }
 
+  /* ---- Rendering: Social Links ---- */
+
+  function renderSocials(data) {
+    var el = document.getElementById("socials-bar");
+    if (!el) return;
+    if (!data.socials || !data.socials.length) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    var html = "";
+    for (var i = 0; i < data.socials.length; i++) {
+      var s = data.socials[i];
+      if (s.platform && s.url) {
+        html += '<li><a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener">' + escapeHtml(s.platform) + "</a></li>";
+      }
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Support / Buy Me a Coffee ---- */
+
+  function renderSupportLink(data) {
+    var el = document.getElementById("support-link-wrap");
+    if (!el) return;
+    if (!data.supportLink || !data.supportLink.url) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    var label = data.supportLink.label || "Buy This Dev a Cup of Coffee";
+    el.innerHTML = '<a class="support-link" href="' + escapeHtml(data.supportLink.url) + '" target="_blank" rel="noopener">' + escapeHtml(label) + "</a>";
+  }
+
   /* ---- Rendering: CSS Variables from JSON ---- */
 
   function applyStyles(data) {
@@ -267,11 +303,13 @@
     renderHeader(data);
     renderImage(data);
     renderFavicon(data);
+    renderSocials(data);
     renderUpdates(data);
     renderProjects(data);
     renderInfo(data);
     renderSkills(data);
     renderLinks(data);
+    renderSupportLink(data);
   }
 
   function init() {

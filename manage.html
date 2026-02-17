@@ -33,7 +33,7 @@
       color: var(--mgr-accent);
     }
     label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--mgr-text); }
-    input[type="text"], input[type="email"], input[type="url"], textarea {
+    input[type="text"], input[type="email"], input[type="url"], textarea, select {
       width: 100%;
       padding: 0.5rem;
       border: 1px solid var(--mgr-border);
@@ -343,6 +343,20 @@
   <div id="links-list"></div>
   <button onclick="addLink()">Add Link</button>
 
+  <!-- Support Link -->
+  <h2>Support Link</h2>
+  <p style="font-size:0.85rem;color:#666;margin-bottom:0.5rem;">Add a "Buy Me a Coffee" style link. Leave URL empty to hide.</p>
+  <label>Label</label>
+  <input type="text" id="support-label" placeholder="Buy This Dev a Cup of Coffee">
+  <label>URL</label>
+  <input type="text" id="support-url" placeholder="https://buymeacoffee.com/yourname">
+
+  <!-- Social Links -->
+  <h2>Social Links</h2>
+  <p style="font-size:0.85rem;color:#666;margin-bottom:0.5rem;">Add social media links. They appear in the header if added.</p>
+  <div id="socials-list"></div>
+  <button onclick="addSocial()">Add Social</button>
+
   <!-- Styles / Colors -->
   <h2>Colors</h2>
   <div id="color-fields"></div>
@@ -459,8 +473,15 @@
       renderSkills();
       renderProjects();
       renderLinks();
+      renderSocials();
       renderColors();
       renderOutputFiles();
+
+      // Populate support link
+      if (data.supportLink) {
+        document.getElementById("support-label").value = data.supportLink.label || "";
+        document.getElementById("support-url").value = data.supportLink.url || "";
+      }
     }
 
     /* ---- Skills ---- */
@@ -560,6 +581,40 @@
       renderLinks();
     }
 
+    /* ---- Social Links ---- */
+    function renderSocials() {
+      var el = document.getElementById("socials-list");
+      if (!data.socials) { el.innerHTML = ""; return; }
+      var platforms = ["LinkedIn", "YouTube", "GitHub", "Twitter / X", "Instagram", "Facebook", "Mastodon", "Bluesky", "Twitch", "Discord", "Reddit", "TikTok", "Other"];
+      var html = "";
+      for (var i = 0; i < data.socials.length; i++) {
+        var s = data.socials[i];
+        html += '<div class="item-block">';
+        html += '<div class="item-header"><strong>' + esc(s.platform || "Social") + '</strong>';
+        html += '<button class="danger" onclick="removeSocial(' + i + ')">Remove</button></div>';
+        html += '<label>Platform</label>';
+        html += '<select onchange="data.socials[' + i + '].platform=this.value">';
+        for (var p = 0; p < platforms.length; p++) {
+          html += '<option value="' + escAttr(platforms[p]) + '"' + (s.platform === platforms[p] ? ' selected' : '') + '>' + esc(platforms[p]) + '</option>';
+        }
+        html += '</select>';
+        html += '<label>URL</label><input type="text" value="' + escAttr(s.url) + '" onchange="data.socials[' + i + '].url=this.value">';
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function addSocial() {
+      if (!data.socials) data.socials = [];
+      data.socials.push({ platform: "LinkedIn", url: "" });
+      renderSocials();
+    }
+
+    function removeSocial(idx) {
+      data.socials.splice(idx, 1);
+      renderSocials();
+    }
+
     /* ---- Colors ---- */
     function renderColors() {
       var el = document.getElementById("color-fields");
@@ -639,6 +694,11 @@
       data.info.name = document.getElementById("info-name").value;
       data.info.email = document.getElementById("info-email").value;
       data.info.bio = document.getElementById("info-bio").value;
+
+      // Support link
+      if (!data.supportLink) data.supportLink = {};
+      data.supportLink.label = document.getElementById("support-label").value;
+      data.supportLink.url = document.getElementById("support-url").value;
     }
 
     function saveData() {
