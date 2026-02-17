@@ -1,0 +1,316 @@
+# Portfolio Manager
+
+A single-page portfolio system built with HTML, CSS, vanilla JavaScript, and a Go build tool. All content is driven by a single JSON data file. Fully responsive and compatible with older Safari versions.
+
+---
+
+## Features
+
+- **JSON-driven content** -- every section (projects, links, skills, info, notice) renders from a single data file
+- **Paginated projects** -- displays 3 projects per page with previous/next controls
+- **Color theming** -- monochromatic color harmony with a customizable palette via the manager interface
+- **Manager interface** -- a browser-based editor (`manage.html`) for modifying all content, colors, skills, projects, and links without touching code
+- **Go build tool** -- compiles all assets (CSS, JS, JSON) into self-contained HTML files for deployment
+- **Multi-page output** -- produces identical copies across multiple URL paths so existing bookmarks and links continue to work
+- **Built-in local server** -- a cross-platform C HTTP server with zero dependencies, compiles on Windows, macOS, and Linux
+- **One-click launchers** -- shell script (macOS/Linux) and batch file (Windows) that compile and start the server automatically
+- **No external dependencies** -- zero frameworks, zero CDN links, zero runtime requirements beyond a C compiler
+- **Responsive layout** -- works across desktop, tablet, and mobile with breakpoints at 768px and 480px
+- **Older Safari support** -- uses webkit-prefixed flexbox properties for compatibility
+
+---
+
+## File Structure
+
+```
+.
+├── index.html          # Portfolio page (links external CSS/JS)
+├── styles.css          # All styles with CSS custom properties
+├── scripts.js          # Vanilla JS: data loading, rendering, pagination
+├── crissy-data.json    # All portfolio content and color configuration
+├── manage.html         # Browser-based content editor with AI generation
+├── serve.c             # Cross-platform HTTP server (C, no dependencies)
+├── launch.sh           # macOS / Linux launcher (compiles and runs server)
+├── launch.bat          # Windows launcher (compiles and runs server)
+├── build.go            # Go CLI that inlines everything into static HTML
+└── build/              # Output directory (generated)
+    ├── index.html
+    ├── projects.html
+    ├── links.html
+    └── about.html
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- A C compiler for the local server (see below)
+- [Go](https://go.dev/dl/) 1.18 or later (only needed for the production build tool)
+
+Most systems already have a C compiler available. If not:
+
+| OS | Install |
+|---|---|
+| macOS | `xcode-select --install` |
+| Ubuntu / Debian | `sudo apt install gcc` |
+| Fedora | `sudo dnf install gcc` |
+| Windows | [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) or [MinGW-w64](https://www.mingw-w64.org/) |
+
+### 1. Quick Start (Recommended)
+
+Run the launcher script. It compiles the C server automatically and opens the manager in your browser.
+
+**macOS / Linux:**
+
+```sh
+chmod +x launch.sh
+./launch.sh
+```
+
+**Windows:**
+
+```
+launch.bat
+```
+
+This starts a local server on port 9090, opens `manage.html` in your default browser, and you can use the **View Portfolio** button to see the live site. To use a different port:
+
+```sh
+./launch.sh 3000
+```
+
+```
+launch.bat 3000
+```
+
+### 2. Configure Your Data
+
+Edit `crissy-data.json` directly or use the manager interface that opened in your browser.
+
+The JSON structure:
+
+```json
+{
+  "site": {
+    "title": "Your Portfolio",
+    "outputFiles": ["index.html", "projects.html", "links.html", "about.html"]
+  },
+  "notice": {
+    "text": "Latest update message here.",
+    "link": "https://example.com/",
+    "updated": "2026-02-17"
+  },
+  "info": {
+    "name": "Your Name",
+    "email": "you@example.com",
+    "bio": "Short bio.",
+    "skills": ["HTML", "CSS", "JavaScript", "Go"]
+  },
+  "projects": [
+    {
+      "id": 1,
+      "title": "Project Name",
+      "description": "What it does.",
+      "url": "https://example.com/",
+      "tags": ["web", "tools"]
+    }
+  ],
+  "links": [
+    { "label": "Website", "url": "https://example.com/" }
+  ],
+  "styles": {
+    "primary": "#56008f",
+    "secondary": "#f1eaf6",
+    "accent": "#180029",
+    "text": "#201825",
+    "background": "#fdfcfd",
+    "harmony": ["#56008f", "#9300f5", "#180029"],
+    "bodyFont": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "headingFont": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "headingWeight": "700",
+    "baseSize": "16px",
+    "borderRadius": "0px"
+  }
+}
+```
+
+### 3. Use the Manager Interface
+
+If the server is running (via the launcher), `manage.html` is already open. From there you can:
+
+- Edit site title, notice text, and personal info
+- Add and remove skills
+- Add, edit, and remove projects
+- Add and remove links
+- Change all theme colors with color pickers
+- Configure which output files the build tool generates
+- Download the updated JSON
+- Generate content with AI (see below)
+
+### AI Content Generation
+
+The manager includes built-in AI content generation for text fields (notice, bio, project descriptions). It calls the OpenAI API directly from the browser.
+
+**Setup:**
+
+1. Open `manage.html`
+2. Under **AI Content Generation**, either paste your OpenAI API key or click the file picker to load it from a `.txt` file
+3. Select the model (GPT-5.2 or GPT-5.1)
+
+**Usage:**
+
+Each text field that supports generation has a **Generate** button beside it. Click it to reveal a prompt box, type what you want, and click **Generate Content**. The AI output replaces the field value.
+
+**Writing rules enforced automatically:**
+
+- No emojis
+- No contractions (all words written out fully)
+- No em dashes or en dashes
+- No spaced hyphens ( - )
+- No exclamation marks
+- No filler or marketing language
+- Academic casual conversational tone
+- Concise, direct output with no meta-commentary
+
+These rules are enforced both in the system prompt sent to the API and in a post-processing pass that catches any remaining violations before the text is inserted.
+
+### 4. Build for Production
+
+Compile the build tool and run it:
+
+```sh
+go build -o portfolio-build build.go
+./portfolio-build .
+```
+
+This reads `index.html`, `styles.css`, `scripts.js`, and `crissy-data.json`, inlines everything into a single self-contained HTML file, then writes identical copies to `build/` for each filename listed in `site.outputFiles`.
+
+The output files contain no external references. The JS is patched at build time to use embedded data instead of XHR.
+
+### 5. Deploy
+
+Copy the contents of `build/` to your hosting provider's public directory.
+
+---
+
+## Deploying with GitHub Pages
+
+### Step 1: Create a Repository
+
+```sh
+git init
+git add .
+git commit -m "initial commit"
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+```
+
+### Step 2: Configure GitHub Pages
+
+1. Go to your repository on GitHub
+2. Navigate to **Settings** > **Pages**
+3. Under **Source**, select **Deploy from a branch**
+4. Select the **main** branch and set the folder to `/build` (or `/` if you copy build output to root)
+5. Click **Save**
+
+Your site will be live at `https://YOUR_USERNAME.github.io/YOUR_REPO/` within a few minutes.
+
+### Step 3: Set Up a Custom Domain
+
+1. In your repository, go to **Settings** > **Pages**
+2. Under **Custom domain**, enter your domain (e.g., `yourdomain.com`)
+3. Click **Save** -- GitHub will create a `CNAME` file in your repo
+
+#### DNS Configuration
+
+At your domain registrar or DNS provider, add the following records:
+
+**For an apex domain** (e.g., `yourdomain.com`):
+
+| Type | Name | Value |
+|------|------|-------|
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+
+**For a subdomain** (e.g., `www.yourdomain.com`):
+
+| Type | Name | Value |
+|------|------|-------|
+| CNAME | www | YOUR_USERNAME.github.io |
+
+4. Wait for DNS propagation (can take up to 24-48 hours, usually much faster)
+5. Back in GitHub Pages settings, check **Enforce HTTPS** once the certificate is provisioned
+
+### Step 4: Automate Builds (Optional)
+
+Create `.github/workflows/build.yml` to rebuild on every push:
+
+```yaml
+name: Build Portfolio
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        run: |
+          go build -o portfolio-build build.go
+          ./portfolio-build .
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+```
+
+This builds the portfolio and deploys the `build/` directory to the `gh-pages` branch automatically.
+
+---
+
+## Color Theming
+
+Colors are defined in the `styles` section of `crissy-data.json`. The CSS uses custom properties (`--primary`, `--secondary`, etc.) that the JavaScript applies at runtime from the JSON data.
+
+The default palette uses a **monochromatic** harmony. To change it:
+
+1. Open `manage.html`
+2. Use the color pickers under the **Colors** section
+3. Save or download the updated JSON
+4. Rebuild
+
+---
+
+## Adding Output Pages
+
+To add or remove output filenames (so all URLs resolve to the same page), edit the `site.outputFiles` array in `crissy-data.json` or use the manager interface under **Output Files**. Then rebuild.
+
+---
+
+## Tech Stack
+
+- **HTML5** -- semantic markup
+- **CSS3** -- custom properties, flexbox with webkit prefixes
+- **Vanilla JavaScript** -- ES5 compatible, no transpilation needed
+- **JSON** -- single data source
+- **Go** -- build tool for asset inlining
+
+---
+
+## License
+
+MIT

@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Manager</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --mgr-bg: #fdfcfd;
+      --mgr-text: #201825;
+      --mgr-primary: #56008f;
+      --mgr-secondary: #f1eaf6;
+      --mgr-accent: #180029;
+      --mgr-border: #ccc;
+      --mgr-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    html { font-size: 16px; }
+    body {
+      font-family: var(--mgr-font);
+      color: var(--mgr-text);
+      background: var(--mgr-bg);
+      padding: 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--mgr-accent); }
+    h2 {
+      font-size: 1.125rem;
+      margin: 1.5rem 0 0.75rem;
+      padding-bottom: 0.375rem;
+      border-bottom: 2px solid var(--mgr-primary);
+      color: var(--mgr-accent);
+    }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--mgr-text); }
+    input[type="text"], input[type="email"], input[type="url"], textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--mgr-border);
+      border-radius: 0;
+      font-family: var(--mgr-font);
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    button {
+      font-family: var(--mgr-font);
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--mgr-primary);
+      background: var(--mgr-bg);
+      color: var(--mgr-primary);
+      cursor: pointer;
+      border-radius: 0;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    button:hover { background: var(--mgr-primary); color: #fff; }
+    button.danger { border-color: #a00; color: #a00; }
+    button.danger:hover { background: #a00; color: #fff; }
+    button.primary-btn { background: var(--mgr-primary); color: #fff; }
+    button.primary-btn:hover { background: var(--mgr-accent); border-color: var(--mgr-accent); }
+    .field-row { margin-bottom: 0.5rem; }
+    .item-block {
+      background: var(--mgr-secondary);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      border: 1px solid var(--mgr-border);
+      border-radius: 0;
+    }
+    .item-block .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .item-block .item-header strong { font-size: 0.95rem; }
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .color-row label { margin-bottom: 0; min-width: 80px; }
+    .color-row input[type="color"] {
+      width: 40px;
+      height: 32px;
+      border: 1px solid var(--mgr-border);
+      border-radius: 0;
+      padding: 0;
+      cursor: pointer;
+      background: none;
+    }
+    .color-row input[type="text"] {
+      width: 100px;
+      margin-bottom: 0;
+    }
+    .tag-input-wrap { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .tag-input-wrap input { flex: 1; margin-bottom: 0; }
+    .tags-display { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
+    .tags-display span {
+      background: var(--mgr-primary);
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      cursor: pointer;
+      border-radius: 0;
+    }
+    #output-area {
+      background: #1a1a2e;
+      color: #0f0;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      margin-top: 1rem;
+      min-height: 60px;
+      border-radius: 0;
+      display: none;
+    }
+    .skills-display { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
+    .skills-display span {
+      background: var(--mgr-secondary);
+      border: 1px solid var(--mgr-primary);
+      font-size: 0.8rem;
+      padding: 0.2rem 0.6rem;
+      cursor: pointer;
+      color: var(--mgr-accent);
+      border-radius: 0;
+    }
+    .ai-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .ai-row textarea, .ai-row input[type="text"] {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    button.ai-btn {
+      border-color: var(--mgr-accent);
+      color: var(--mgr-accent);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    button.ai-btn:hover {
+      background: var(--mgr-accent);
+      color: #fff;
+    }
+    .ai-prompt-box {
+      background: var(--mgr-secondary);
+      border: 1px solid var(--mgr-border);
+      border-radius: 0;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      display: none;
+    }
+    .ai-prompt-box textarea {
+      width: 100%;
+      min-height: 50px;
+      margin-bottom: 0.5rem;
+    }
+    .ai-prompt-box .ai-prompt-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .ai-prompt-box .ai-prompt-actions select {
+      font-family: var(--mgr-font);
+      font-size: 0.8rem;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--mgr-border);
+      border-radius: 0;
+      background: #fff;
+    }
+    .ai-status {
+      font-size: 0.8rem;
+      color: var(--mgr-primary);
+      margin-left: 0.5rem;
+    }
+    .api-key-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .api-key-row input[type="text"],
+    .api-key-row input[type="password"] {
+      flex: 1;
+      margin-bottom: 0;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    .api-key-row input[type="file"] {
+      font-family: var(--mgr-font);
+      font-size: 0.8rem;
+      border: none;
+      padding: 0;
+      margin-bottom: 0;
+    }
+    @media (max-width: 480px) {
+      body { padding: 1rem; }
+      .color-row { flex-wrap: wrap; }
+      .ai-row { flex-direction: column; }
+      .api-key-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Portfolio Manager</h1>
+
+  <!-- AI Configuration -->
+  <h2>AI Content Generation</h2>
+  <div class="field-row">
+    <label>OpenAI API Key (paste or load from .txt file)</label>
+    <div class="api-key-row">
+      <input type="password" id="api-key-input" placeholder="sk-...">
+      <input type="file" id="api-key-file" accept=".txt">
+      <button onclick="toggleKeyVisibility()">Show</button>
+    </div>
+    <div class="field-row" style="margin-top:0.5rem">
+      <label>Model</label>
+      <select id="ai-model" style="font-family:var(--mgr-font);font-size:0.85rem;padding:0.4rem;border:1px solid var(--mgr-border);border-radius:0;background:#fff;width:auto;">
+        <option value="gpt-5.2">GPT-5.2</option>
+        <option value="gpt-5.1">GPT-5.1</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Site Settings -->
+  <h2>Site</h2>
+  <div class="field-row">
+    <label for="site-title">Title</label>
+    <input type="text" id="site-title" value="">
+  </div>
+
+  <!-- Notice -->
+  <h2>Notice</h2>
+  <div class="field-row">
+    <label for="notice-text">Notice Text</label>
+    <div class="ai-row">
+      <input type="text" id="notice-text" value="">
+      <button class="ai-btn" onclick="togglePromptBox('notice-text-ai')">Generate</button>
+    </div>
+    <div class="ai-prompt-box" id="notice-text-ai">
+      <label>Prompt</label>
+      <textarea id="notice-text-ai-prompt" placeholder="Describe the notice you want generated..."></textarea>
+      <div class="ai-prompt-actions">
+        <button class="ai-btn" onclick="aiGenerate('notice-text-ai', 'notice-text')">Generate Content</button>
+        <span class="ai-status" id="notice-text-ai-status"></span>
+      </div>
+    </div>
+  </div>
+  <div class="field-row">
+    <label for="notice-link">Notice Link</label>
+    <input type="url" id="notice-link" value="">
+  </div>
+  <div class="field-row">
+    <label for="notice-updated">Updated Date</label>
+    <input type="text" id="notice-updated" value="">
+  </div>
+
+  <!-- Info -->
+  <h2>Info</h2>
+  <div class="field-row">
+    <label for="info-name">Name</label>
+    <input type="text" id="info-name" value="">
+  </div>
+  <div class="field-row">
+    <label for="info-email">Email</label>
+    <input type="email" id="info-email" value="">
+  </div>
+  <div class="field-row">
+    <label for="info-bio">Bio</label>
+    <div class="ai-row">
+      <textarea id="info-bio"></textarea>
+      <button class="ai-btn" onclick="togglePromptBox('info-bio-ai')">Generate</button>
+    </div>
+    <div class="ai-prompt-box" id="info-bio-ai">
+      <label>Prompt</label>
+      <textarea id="info-bio-ai-prompt" placeholder="Describe the bio you want generated..."></textarea>
+      <div class="ai-prompt-actions">
+        <button class="ai-btn" onclick="aiGenerate('info-bio-ai', 'info-bio')">Generate Content</button>
+        <span class="ai-status" id="info-bio-ai-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skills -->
+  <h2>Skills</h2>
+  <div class="skills-display" id="skills-display"></div>
+  <div class="tag-input-wrap">
+    <input type="text" id="skill-input" placeholder="Add skill">
+    <button onclick="addSkill()">Add</button>
+  </div>
+
+  <!-- Projects -->
+  <h2>Projects</h2>
+  <div id="projects-list"></div>
+  <button onclick="addProject()">Add Project</button>
+
+  <!-- Links -->
+  <h2>Links</h2>
+  <div id="links-list"></div>
+  <button onclick="addLink()">Add Link</button>
+
+  <!-- Styles / Colors -->
+  <h2>Colors</h2>
+  <div id="color-fields"></div>
+
+  <!-- Output Files -->
+  <h2>Output Files</h2>
+  <div id="output-files-list"></div>
+  <div class="tag-input-wrap">
+    <input type="text" id="output-file-input" placeholder="e.g. custom.html">
+    <button onclick="addOutputFile()">Add File</button>
+  </div>
+
+  <!-- Actions -->
+  <h2>Actions</h2>
+  <button class="primary-btn" onclick="saveData()">Save JSON</button>
+  <button onclick="downloadJSON()">Download JSON</button>
+  <button onclick="viewPortfolio()">View Portfolio</button>
+
+  <div id="output-area"></div>
+
+  <script>
+    var data = null;
+
+    function loadData() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "crissy-data.json?v=" + Date.now(), true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          // status 200 for http, status 0 for file:// protocol
+          if (xhr.status === 200 || (xhr.status === 0 && xhr.responseText)) {
+            try {
+              data = JSON.parse(xhr.responseText);
+              populateForm();
+            } catch (e) {
+              showLoadError("Failed to parse crissy-data.json: " + e.message);
+            }
+          } else {
+            // Fallback: try fetch API for environments where XHR fails on local files
+            if (typeof fetch === "function") {
+              fetch("crissy-data.json?v=" + Date.now())
+                .then(function (res) { return res.json(); })
+                .then(function (json) {
+                  data = json;
+                  populateForm();
+                })
+                .catch(function (err) {
+                  showLoadError("Could not load crissy-data.json. Serve this directory from a local web server (e.g. python3 -m http.server 8000). Error: " + err.message);
+                });
+            } else {
+              showLoadError("Could not load crissy-data.json (status " + xhr.status + "). Serve this directory from a local web server.");
+            }
+          }
+        }
+      };
+      xhr.send();
+    }
+
+    function showLoadError(msg) {
+      var out = document.getElementById("output-area");
+      out.style.display = "block";
+      out.textContent = msg;
+    }
+
+    function populateForm() {
+      if (!data) return;
+
+      document.getElementById("site-title").value = data.site ? data.site.title || "" : "";
+      document.getElementById("notice-text").value = data.notice ? data.notice.text || "" : "";
+      document.getElementById("notice-link").value = data.notice ? data.notice.link || "" : "";
+      document.getElementById("notice-updated").value = data.notice ? data.notice.updated || "" : "";
+      document.getElementById("info-name").value = data.info ? data.info.name || "" : "";
+      document.getElementById("info-email").value = data.info ? data.info.email || "" : "";
+      document.getElementById("info-bio").value = data.info ? data.info.bio || "" : "";
+
+      renderSkills();
+      renderProjects();
+      renderLinks();
+      renderColors();
+      renderOutputFiles();
+    }
+
+    /* ---- Skills ---- */
+    function renderSkills() {
+      var el = document.getElementById("skills-display");
+      if (!data.info || !data.info.skills) { el.innerHTML = ""; return; }
+      var html = "";
+      for (var i = 0; i < data.info.skills.length; i++) {
+        html += '<span onclick="removeSkill(' + i + ')">' + esc(data.info.skills[i]) + ' x</span>';
+      }
+      el.innerHTML = html;
+    }
+
+    function addSkill() {
+      var input = document.getElementById("skill-input");
+      var val = input.value.trim();
+      if (!val) return;
+      if (!data.info) data.info = {};
+      if (!data.info.skills) data.info.skills = [];
+      data.info.skills.push(val);
+      input.value = "";
+      renderSkills();
+    }
+
+    function removeSkill(idx) {
+      data.info.skills.splice(idx, 1);
+      renderSkills();
+    }
+
+    /* ---- Projects ---- */
+    function renderProjects() {
+      var el = document.getElementById("projects-list");
+      if (!data.projects) { el.innerHTML = ""; return; }
+      var html = "";
+      for (var i = 0; i < data.projects.length; i++) {
+        var p = data.projects[i];
+        html += '<div class="item-block">';
+        html += '<div class="item-header"><strong>' + esc(p.title || "Untitled") + '</strong>';
+        html += '<button class="danger" onclick="removeProject(' + i + ')">Remove</button></div>';
+        html += '<label>Title</label><input type="text" id="proj-title-' + i + '" value="' + escAttr(p.title) + '" onchange="data.projects[' + i + '].title=this.value">';
+        html += '<label>Description</label>';
+        html += '<div class="ai-row">';
+        html += '<textarea id="proj-desc-' + i + '" onchange="data.projects[' + i + '].description=this.value">' + esc(p.description) + '</textarea>';
+        html += '<button class="ai-btn" onclick="togglePromptBox(\'proj-desc-ai-' + i + '\')">Generate</button>';
+        html += '</div>';
+        html += '<div class="ai-prompt-box" id="proj-desc-ai-' + i + '">';
+        html += '<label>Prompt</label>';
+        html += '<textarea id="proj-desc-ai-' + i + '-prompt" placeholder="Describe this project for the AI..."></textarea>';
+        html += '<div class="ai-prompt-actions">';
+        html += '<button class="ai-btn" onclick="aiGenerate(\'proj-desc-ai-' + i + '\', \'proj-desc-' + i + '\', ' + i + ')">Generate Content</button>';
+        html += '<span class="ai-status" id="proj-desc-ai-' + i + '-status"></span>';
+        html += '</div></div>';
+        html += '<label>URL</label><input type="text" value="' + escAttr(p.url) + '" onchange="data.projects[' + i + '].url=this.value">';
+        html += '<label>Tags (comma separated)</label><input type="text" value="' + escAttr((p.tags || []).join(", ")) + '" onchange="data.projects[' + i + '].tags=this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean)">';
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function addProject() {
+      if (!data.projects) data.projects = [];
+      var nextId = data.projects.length ? Math.max.apply(null, data.projects.map(function(p){return p.id||0})) + 1 : 1;
+      data.projects.push({ id: nextId, title: "", description: "", url: "", tags: [] });
+      renderProjects();
+    }
+
+    function removeProject(idx) {
+      data.projects.splice(idx, 1);
+      renderProjects();
+    }
+
+    /* ---- Links ---- */
+    function renderLinks() {
+      var el = document.getElementById("links-list");
+      if (!data.links) { el.innerHTML = ""; return; }
+      var html = "";
+      for (var i = 0; i < data.links.length; i++) {
+        var lnk = data.links[i];
+        html += '<div class="item-block">';
+        html += '<div class="item-header"><strong>' + esc(lnk.label || "Untitled") + '</strong>';
+        html += '<button class="danger" onclick="removeLink(' + i + ')">Remove</button></div>';
+        html += '<label>Label</label><input type="text" value="' + escAttr(lnk.label) + '" onchange="data.links[' + i + '].label=this.value">';
+        html += '<label>URL</label><input type="text" value="' + escAttr(lnk.url) + '" onchange="data.links[' + i + '].url=this.value">';
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function addLink() {
+      if (!data.links) data.links = [];
+      data.links.push({ label: "", url: "" });
+      renderLinks();
+    }
+
+    function removeLink(idx) {
+      data.links.splice(idx, 1);
+      renderLinks();
+    }
+
+    /* ---- Colors ---- */
+    function renderColors() {
+      var el = document.getElementById("color-fields");
+      if (!data.styles) { el.innerHTML = ""; return; }
+      var colors = ["primary", "secondary", "accent", "text", "background"];
+      var html = "";
+      for (var i = 0; i < colors.length; i++) {
+        var key = colors[i];
+        var val = data.styles[key] || "#000000";
+        html += '<div class="color-row">';
+        html += '<label>' + key + '</label>';
+        html += '<input type="color" value="' + val + '" onchange="updateColor(\'' + key + '\', this.value)">';
+        html += '<input type="text" value="' + val + '" id="color-text-' + key + '" onchange="updateColor(\'' + key + '\', this.value)">';
+        html += '</div>';
+      }
+      // Harmony colors
+      if (data.styles.harmony) {
+        for (var h = 0; h < data.styles.harmony.length; h++) {
+          var hval = data.styles.harmony[h];
+          html += '<div class="color-row">';
+          html += '<label>harmony ' + (h + 1) + '</label>';
+          html += '<input type="color" value="' + hval + '" onchange="updateHarmony(' + h + ', this.value)">';
+          html += '<input type="text" value="' + hval + '" id="color-text-harmony-' + h + '" onchange="updateHarmony(' + h + ', this.value)">';
+          html += '</div>';
+        }
+      }
+      el.innerHTML = html;
+    }
+
+    function updateColor(key, val) {
+      data.styles[key] = val;
+      renderColors();
+    }
+
+    function updateHarmony(idx, val) {
+      data.styles.harmony[idx] = val;
+      renderColors();
+    }
+
+    /* ---- Output Files ---- */
+    function renderOutputFiles() {
+      var el = document.getElementById("output-files-list");
+      if (!data.site || !data.site.outputFiles) { el.innerHTML = ""; return; }
+      var html = '<div class="tags-display">';
+      for (var i = 0; i < data.site.outputFiles.length; i++) {
+        html += '<span onclick="removeOutputFile(' + i + ')">' + esc(data.site.outputFiles[i]) + ' x</span>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function addOutputFile() {
+      var input = document.getElementById("output-file-input");
+      var val = input.value.trim();
+      if (!val) return;
+      if (!data.site) data.site = {};
+      if (!data.site.outputFiles) data.site.outputFiles = [];
+      data.site.outputFiles.push(val);
+      input.value = "";
+      renderOutputFiles();
+    }
+
+    function removeOutputFile(idx) {
+      data.site.outputFiles.splice(idx, 1);
+      renderOutputFiles();
+    }
+
+    /* ---- Save / Download ---- */
+    function collectFormData() {
+      data.site.title = document.getElementById("site-title").value;
+      data.notice.text = document.getElementById("notice-text").value;
+      data.notice.link = document.getElementById("notice-link").value;
+      data.notice.updated = document.getElementById("notice-updated").value;
+      data.info.name = document.getElementById("info-name").value;
+      data.info.email = document.getElementById("info-email").value;
+      data.info.bio = document.getElementById("info-bio").value;
+    }
+
+    function saveData() {
+      collectFormData();
+      var json = JSON.stringify(data, null, 2);
+      var out = document.getElementById("output-area");
+      out.style.display = "block";
+      out.textContent = "JSON saved (copy below or use Download):\n\n" + json;
+    }
+
+    function downloadJSON() {
+      collectFormData();
+      var json = JSON.stringify(data, null, 2);
+      var blob = new Blob([json], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "crissy-data.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function viewPortfolio() {
+      window.open("index.html", "_blank");
+    }
+
+    /* ---- AI Content Generation ---- */
+
+    var AI_SYSTEM_PROMPT = [
+      "You are a professional content writer for a personal developer portfolio website.",
+      "Strict rules you must follow in every response:",
+      "1. Do not use emojis under any circumstances.",
+      "2. Do not use contractions. Write out all words fully (do not, cannot, will not, it is, etc.).",
+      "3. Do not use em dashes. Use commas, semicolons, colons, or separate sentences instead.",
+      "4. Do not use the filtered hyphen pattern with spaces around it ( - ). If you need to separate clauses, use proper punctuation.",
+      "5. Do not use exclamation marks.",
+      "6. Do not use filler words or marketing language (innovative, cutting-edge, passionate, leverage, synergy, etc.).",
+      "7. Do not use bullet points or lists unless explicitly asked.",
+      "8. Write in an academic yet casual and conversational tone. The text should read as though a knowledgeable person is speaking directly to another person in a relaxed but informed manner.",
+      "9. Keep responses concise and direct. Do not pad with unnecessary qualifiers.",
+      "10. Return only the requested text content. Do not include labels, headers, quotation marks around the output, or meta-commentary about the writing."
+    ].join(" ");
+
+    function getApiKey() {
+      return (document.getElementById("api-key-input").value || "").trim();
+    }
+
+    function getModel() {
+      return document.getElementById("ai-model").value || "gpt-5.2";
+    }
+
+    function toggleKeyVisibility() {
+      var input = document.getElementById("api-key-input");
+      if (input.type === "password") {
+        input.type = "text";
+      } else {
+        input.type = "password";
+      }
+    }
+
+    function togglePromptBox(id) {
+      var box = document.getElementById(id);
+      if (!box) return;
+      box.style.display = box.style.display === "block" ? "none" : "block";
+    }
+
+    // Load API key from a .txt file
+    document.addEventListener("DOMContentLoaded", function () {
+      var fileInput = document.getElementById("api-key-file");
+      if (fileInput) {
+        fileInput.addEventListener("change", function (e) {
+          var file = e.target.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            var key = (ev.target.result || "").trim();
+            document.getElementById("api-key-input").value = key;
+          };
+          reader.readAsText(file);
+        });
+      }
+    });
+
+    function aiGenerate(promptBoxId, targetFieldId, projectIdx) {
+      var apiKey = getApiKey();
+      if (!apiKey) {
+        alert("Enter or load an OpenAI API key first.");
+        return;
+      }
+
+      var promptEl = document.getElementById(promptBoxId + "-prompt");
+      var statusEl = document.getElementById(promptBoxId + "-status");
+      var targetEl = document.getElementById(targetFieldId);
+      if (!promptEl || !targetEl) return;
+
+      var userPrompt = promptEl.value.trim();
+      if (!userPrompt) {
+        alert("Enter a prompt describing the content you want.");
+        return;
+      }
+
+      // Add context about what field this is for
+      var contextHint = "";
+      if (targetFieldId === "notice-text") {
+        contextHint = "This is for a short notice banner at the top of a portfolio page. Keep it to one or two sentences.";
+      } else if (targetFieldId === "info-bio") {
+        contextHint = "This is a brief bio for a developer portfolio. Keep it to two or three sentences.";
+      } else if (targetFieldId.indexOf("proj-desc") === 0) {
+        contextHint = "This is a short project description for a portfolio card. Keep it to one or two sentences.";
+      }
+
+      var fullPrompt = userPrompt;
+      if (contextHint) {
+        fullPrompt = contextHint + " " + userPrompt;
+      }
+
+      var model = getModel();
+
+      statusEl.textContent = "Generating...";
+
+      var body = JSON.stringify({
+        model: model,
+        messages: [
+          { role: "system", content: AI_SYSTEM_PROMPT },
+          { role: "user", content: fullPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 300
+      });
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://api.openai.com/v1/chat/completions", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.setRequestHeader("Authorization", "Bearer " + apiKey);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+
+        if (xhr.status === 200) {
+          try {
+            var resp = JSON.parse(xhr.responseText);
+            var text = resp.choices[0].message.content.trim();
+            // Post-process: enforce no contractions slip-throughs, no em dashes, no spaced hyphens
+            text = postProcessText(text);
+            targetEl.value = text;
+            // Trigger onchange so data object updates
+            if (typeof targetEl.onchange === "function") {
+              targetEl.onchange();
+            } else {
+              var evt = document.createEvent("HTMLEvents");
+              evt.initEvent("change", true, true);
+              targetEl.dispatchEvent(evt);
+            }
+            // If this is a project description, also update data directly
+            if (typeof projectIdx === "number" && data.projects && data.projects[projectIdx]) {
+              data.projects[projectIdx].description = text;
+            }
+            statusEl.textContent = "Done.";
+            setTimeout(function () { statusEl.textContent = ""; }, 3000);
+          } catch (e) {
+            statusEl.textContent = "Error parsing response.";
+          }
+        } else {
+          var errMsg = "API error (" + xhr.status + ")";
+          try {
+            var errResp = JSON.parse(xhr.responseText);
+            if (errResp.error && errResp.error.message) {
+              errMsg = errResp.error.message;
+            }
+          } catch (e) { /* ignore */ }
+          statusEl.textContent = errMsg;
+        }
+      };
+      xhr.send(body);
+    }
+
+    function postProcessText(text) {
+      // Remove em dashes (unicode and typed)
+      text = text.replace(/\u2014/g, ",");
+      text = text.replace(/\u2013/g, ",");
+      // Remove spaced hyphens " - "
+      text = text.replace(/ - /g, ", ");
+      // Common contraction fixes (safety net)
+      var contractions = {
+        "don't": "do not", "Don't": "Do not",
+        "doesn't": "does not", "Doesn't": "Does not",
+        "didn't": "did not", "Didn't": "Did not",
+        "won't": "will not", "Won't": "Will not",
+        "can't": "cannot", "Can't": "Cannot",
+        "couldn't": "could not", "Couldn't": "Could not",
+        "shouldn't": "should not", "Shouldn't": "Should not",
+        "wouldn't": "would not", "Wouldn't": "Would not",
+        "isn't": "is not", "Isn't": "Is not",
+        "aren't": "are not", "Aren't": "Are not",
+        "wasn't": "was not", "Wasn't": "Was not",
+        "weren't": "were not", "Weren't": "Were not",
+        "haven't": "have not", "Haven't": "Have not",
+        "hasn't": "has not", "Hasn't": "Has not",
+        "hadn't": "had not", "Hadn't": "Had not",
+        "it's": "it is", "It's": "It is",
+        "that's": "that is", "That's": "That is",
+        "there's": "there is", "There's": "There is",
+        "here's": "here is", "Here's": "Here is",
+        "what's": "what is", "What's": "What is",
+        "who's": "who is", "Who's": "Who is",
+        "I'm": "I am", "I've": "I have", "I'll": "I will", "I'd": "I would",
+        "you're": "you are", "You're": "You are",
+        "you've": "you have", "You've": "You have",
+        "you'll": "you will", "You'll": "You will",
+        "we're": "we are", "We're": "We are",
+        "we've": "we have", "We've": "We have",
+        "we'll": "we will", "We'll": "We will",
+        "they're": "they are", "They're": "They are",
+        "they've": "they have", "They've": "They have",
+        "they'll": "they will", "They'll": "They will",
+        "let's": "let us", "Let's": "Let us"
+      };
+      var keys = Object.keys(contractions);
+      for (var c = 0; c < keys.length; c++) {
+        var regex = new RegExp(keys[c].replace(/'/g, "[\u2018\u2019']"), "g");
+        text = text.replace(regex, contractions[keys[c]]);
+      }
+      // Remove any emojis (unicode emoji ranges)
+      text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "");
+      // Remove exclamation marks
+      text = text.replace(/!/g, ".");
+      // Clean up double spaces
+      text = text.replace(/ {2,}/g, " ").trim();
+      return text;
+    }
+
+    /* ---- Utility ---- */
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    function escAttr(str) {
+      if (!str) return "";
+      return esc(str).replace(/"/g, "&quot;");
+    }
+
+    /* ---- Init ---- */
+    loadData();
+  </script>
+</body>
+</html>

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Crissy Deutsch - Portfolio</title>
+<style>
+/* === RESET === */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* === CSS VARIABLES (from JSON styles at build) === */
+:root {
+  --primary: #56008f;
+  --secondary: #f1eaf6;
+  --accent: #180029;
+  --text: #201825;
+  --background: #fdfcfd;
+  --harmony-1: #56008f;
+  --harmony-2: #9300f5;
+  --harmony-3: #180029;
+  --body-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --heading-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --heading-weight: 700;
+  --base-size: 16px;
+  --border-radius: 0px;
+}
+
+/* === BASE === */
+html {
+  font-size: var(--base-size);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--body-font);
+  color: var(--text);
+  background-color: var(--background);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* === NOTICE BAR === */
+.notice-bar {
+  background-color: var(--accent);
+  color: var(--secondary);
+  text-align: center;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 0;
+}
+
+.notice-bar a {
+  color: var(--harmony-2);
+  font-weight: 600;
+}
+
+.notice-bar a:hover {
+  text-decoration: underline;
+}
+
+/* === HEADER === */
+.site-header {
+  background-color: var(--primary);
+  color: #fff;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border-radius: 0;
+}
+
+.site-header h1 {
+  font-family: var(--heading-font);
+  font-weight: var(--heading-weight);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+}
+
+/* === MAIN CONTENT === */
+.main-content {
+  -webkit-flex: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* === SECTION TITLES === */
+.section-title {
+  font-family: var(--heading-font);
+  font-weight: var(--heading-weight);
+  font-size: 1.5rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary);
+}
+
+/* === RECENT UPDATES === */
+.updates-section {
+  margin-bottom: 2.5rem;
+}
+
+.update-notice {
+  background-color: var(--secondary);
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--primary);
+  border-radius: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.update-notice a {
+  font-weight: 600;
+}
+
+/* === PROJECTS === */
+.projects-section {
+  margin-bottom: 2.5rem;
+}
+
+.projects-grid {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.project-card {
+  background-color: var(--secondary);
+  border: 1px solid var(--primary);
+  border-radius: 0;
+  padding: 1.25rem;
+  -webkit-transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  box-shadow: 0 2px 8px rgba(86, 0, 143, 0.15);
+}
+
+.project-card h3 {
+  font-family: var(--heading-font);
+  font-weight: var(--heading-weight);
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+}
+
+.project-card p {
+  font-size: 0.925rem;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.project-tags {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.project-tag {
+  background-color: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0;
+  display: inline-block;
+}
+
+.project-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* === PAGINATION === */
+.pagination {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.pagination button {
+  font-family: var(--body-font);
+  font-size: 0.875rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--primary);
+  background-color: var(--background);
+  color: var(--primary);
+  cursor: pointer;
+  border-radius: 0;
+  -webkit-transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: var(--primary);
+  color: #fff;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pagination .page-info {
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+/* === INFO / SKILLS === */
+.info-section {
+  margin-bottom: 2.5rem;
+}
+
+.info-block {
+  margin-bottom: 1rem;
+}
+
+.info-block p {
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.info-block a {
+  color: var(--primary);
+}
+
+.skills-list {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin-top: 0.75rem;
+}
+
+.skills-list li {
+  background-color: var(--secondary);
+  border: 1px solid var(--primary);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 0;
+  color: var(--accent);
+}
+
+/* === LINKS SECTION === */
+.links-section {
+  margin-bottom: 2.5rem;
+}
+
+.links-list {
+  list-style: none;
+  padding: 0;
+}
+
+.links-list li {
+  margin-bottom: 0.5rem;
+}
+
+.links-list a {
+  display: inline-block;
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  color: var(--primary);
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  -webkit-transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease;
+}
+
+.links-list a:hover {
+  border-bottom-color: var(--primary);
+  text-decoration: none;
+}
+
+/* === FOOTER === */
+.site-footer {
+  background-color: var(--accent);
+  color: var(--secondary);
+  text-align: center;
+  padding: 1.25rem 1rem;
+  font-size: 0.8rem;
+  border-radius: 0;
+}
+
+/* === RESPONSIVE === */
+@media (min-width: 600px) {
+  .projects-grid {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 768px) {
+  .site-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .main-content {
+    padding: 2.5rem 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-header {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .site-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .main-content {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .pagination button {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Notice Bar -->
+  <div class="notice-bar" id="notice-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <h1 id="site-title">Crissy Deutsch Portfolio</h1>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Recent Updates -->
+    <section class="updates-section">
+      <h2 class="section-title">Recent Updates</h2>
+      <div class="update-notice" id="update-notice"></div>
+    </section>
+
+    <!-- Projects -->
+    <section class="projects-section">
+      <h2 class="section-title">Projects</h2>
+      <div class="projects-grid" id="projects-grid"></div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <!-- Info & Skills -->
+    <section class="info-section">
+      <h2 class="section-title">About</h2>
+      <div class="info-block" id="info-block"></div>
+      <ul class="skills-list" id="skills-list"></ul>
+    </section>
+
+    <!-- Links -->
+    <section class="links-section">
+      <h2 class="section-title">Links</h2>
+      <ul class="links-list" id="links-list"></ul>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    Crissy Deutsch
+  </footer>
+
+<script>
+var __CRISSY_DATA__ = {
+  "site": {
+    "title": "Crissy Deutsch Portfolio",
+    "outputFiles": [
+      "index.html",
+      "projects.html",
+      "links.html",
+      "about.html"
+    ]
+  },
+  "notice": {
+    "text": "All tutorials and related info has moved to https://lainc.io/",
+    "link": "https://lainc.io/",
+    "updated": "2026-02-17"
+  },
+  "info": {
+    "name": "Crissy Deutsch",
+    "email": "Crissy@XcaliburMoon.Net",
+    "bio": "Developer and creator.",
+    "skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "Go",
+      "Python",
+      "Linux",
+      "Networking",
+      "Security"
+    ]
+  },
+  "projects": [
+    {
+      "id": 1,
+      "title": "lainc.io",
+      "description": "Tutorials and technical reference platform.",
+      "url": "https://lainc.io/",
+      "tags": ["web", "education"]
+    },
+    {
+      "id": 2,
+      "title": "XcaliburMoon",
+      "description": "Personal infrastructure and development projects.",
+      "url": "https://xcaliburmoon.net/",
+      "tags": ["infrastructure", "development"]
+    },
+    {
+      "id": 3,
+      "title": "Portfolio Site",
+      "description": "Single page portfolio built with HTML, CSS, vanilla JS, and a Go build tool.",
+      "url": "https://crissymoon.com/",
+      "tags": ["web", "go"]
+    },
+    {
+      "id": 4,
+      "title": "Network Tools",
+      "description": "Collection of networking utilities and scripts.",
+      "url": "",
+      "tags": ["networking", "tools"]
+    },
+    {
+      "id": 5,
+      "title": "Security Research",
+      "description": "Security research and vulnerability analysis tools.",
+      "url": "",
+      "tags": ["security", "research"]
+    },
+    {
+      "id": 6,
+      "title": "Automation Scripts",
+      "description": "Server automation and deployment scripts.",
+      "url": "",
+      "tags": ["automation", "devops"]
+    }
+  ],
+  "links": [
+    {
+      "label": "lainc.io",
+      "url": "https://lainc.io/"
+    },
+    {
+      "label": "Email",
+      "url": "mailto:Crissy@XcaliburMoon.Net"
+    }
+  ],
+  "styles": {
+    "primary": "#56008f",
+    "secondary": "#f1eaf6",
+    "accent": "#180029",
+    "text": "#201825",
+    "background": "#fdfcfd",
+    "harmony": ["#56008f", "#9300f5", "#180029"],
+    "bodyFont": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "headingFont": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "headingWeight": "700",
+    "baseSize": "16px",
+    "borderRadius": "0px"
+  }
+}
+;
+</script>
+<script>
+/* Crissy Portfolio - scripts.js */
+(function () {
+  "use strict";
+
+  var PROJECTS_PER_PAGE = 3;
+  var currentPage = 1;
+  var siteData = null;
+
+  /* ---- Data Loading ---- */
+
+  function loadData(callback) {
+    try {
+      siteData = __CRISSY_DATA__;
+      callback(null, siteData);
+    } catch (e) {
+      callback(e, null);
+    }
+  }
+
+  /* ---- Rendering: Notice ---- */
+
+  function renderNotice(data) {
+    var el = document.getElementById("notice-bar");
+    if (!el || !data.notice) return;
+    var html = data.notice.text;
+    if (data.notice.link) {
+      html = html.replace(
+        data.notice.link,
+        '<a href="' + escapeHtml(data.notice.link) + '">' + escapeHtml(data.notice.link) + "</a>"
+      );
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Header ---- */
+
+  function renderHeader(data) {
+    var el = document.getElementById("site-title");
+    if (!el || !data.site) return;
+    el.textContent = data.site.title;
+  }
+
+  /* ---- Rendering: Updates ---- */
+
+  function renderUpdates(data) {
+    var el = document.getElementById("update-notice");
+    if (!el || !data.notice) return;
+    var html = data.notice.text;
+    if (data.notice.link) {
+      html = html.replace(
+        data.notice.link,
+        '<a href="' + escapeHtml(data.notice.link) + '">' + escapeHtml(data.notice.link) + "</a>"
+      );
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Projects (Paginated) ---- */
+
+  function renderProjects(data) {
+    var container = document.getElementById("projects-grid");
+    if (!container || !data.projects) return;
+
+    var projects = data.projects;
+    var totalPages = Math.ceil(projects.length / PROJECTS_PER_PAGE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    var start = (currentPage - 1) * PROJECTS_PER_PAGE;
+    var end = start + PROJECTS_PER_PAGE;
+    var pageProjects = projects.slice(start, end);
+
+    var html = "";
+    for (var i = 0; i < pageProjects.length; i++) {
+      var p = pageProjects[i];
+      html += '<div class="project-card">';
+      html += "<h3>" + escapeHtml(p.title) + "</h3>";
+      html += "<p>" + escapeHtml(p.description) + "</p>";
+      if (p.tags && p.tags.length) {
+        html += '<div class="project-tags">';
+        for (var t = 0; t < p.tags.length; t++) {
+          html += '<span class="project-tag">' + escapeHtml(p.tags[t]) + "</span>";
+        }
+        html += "</div>";
+      }
+      if (p.url) {
+        html += '<a class="project-link" href="' + escapeHtml(p.url) + '" target="_blank" rel="noopener">View Project</a>';
+      }
+      html += "</div>";
+    }
+    container.innerHTML = html;
+
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    var el = document.getElementById("pagination");
+    if (!el) return;
+
+    if (totalPages <= 1) {
+      el.innerHTML = "";
+      return;
+    }
+
+    var html = "";
+    html += '<button id="prev-btn"' + (currentPage <= 1 ? " disabled" : "") + ">Prev</button>";
+    html += '<span class="page-info">Page ' + currentPage + " of " + totalPages + "</span>";
+    html += '<button id="next-btn"' + (currentPage >= totalPages ? " disabled" : "") + ">Next</button>";
+    el.innerHTML = html;
+
+    var prevBtn = document.getElementById("prev-btn");
+    var nextBtn = document.getElementById("next-btn");
+
+    if (prevBtn) {
+      prevBtn.onclick = function () {
+        if (currentPage > 1) {
+          currentPage--;
+          renderProjects(siteData);
+        }
+      };
+    }
+    if (nextBtn) {
+      nextBtn.onclick = function () {
+        var total = Math.ceil(siteData.projects.length / PROJECTS_PER_PAGE);
+        if (currentPage < total) {
+          currentPage++;
+          renderProjects(siteData);
+        }
+      };
+    }
+  }
+
+  /* ---- Rendering: Info & Skills ---- */
+
+  function renderInfo(data) {
+    var el = document.getElementById("info-block");
+    if (!el || !data.info) return;
+
+    var html = "";
+    html += "<p><strong>" + escapeHtml(data.info.name) + "</strong></p>";
+    if (data.info.email) {
+      html += '<p>Email: <a href="mailto:' + escapeHtml(data.info.email) + '">' + escapeHtml(data.info.email) + "</a></p>";
+    }
+    if (data.info.bio) {
+      html += "<p>" + escapeHtml(data.info.bio) + "</p>";
+    }
+    el.innerHTML = html;
+  }
+
+  function renderSkills(data) {
+    var el = document.getElementById("skills-list");
+    if (!el || !data.info || !data.info.skills) return;
+
+    var html = "";
+    for (var i = 0; i < data.info.skills.length; i++) {
+      html += "<li>" + escapeHtml(data.info.skills[i]) + "</li>";
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Links ---- */
+
+  function renderLinks(data) {
+    var el = document.getElementById("links-list");
+    if (!el || !data.links) return;
+
+    var html = "";
+    for (var i = 0; i < data.links.length; i++) {
+      var lnk = data.links[i];
+      html += '<li><a href="' + escapeHtml(lnk.url) + '">' + escapeHtml(lnk.label) + "</a></li>";
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: CSS Variables from JSON ---- */
+
+  function applyStyles(data) {
+    if (!data.styles) return;
+    var root = document.documentElement;
+    var s = data.styles;
+    if (s.primary) root.style.setProperty("--primary", s.primary);
+    if (s.secondary) root.style.setProperty("--secondary", s.secondary);
+    if (s.accent) root.style.setProperty("--accent", s.accent);
+    if (s.text) root.style.setProperty("--text", s.text);
+    if (s.background) root.style.setProperty("--background", s.background);
+    if (s.harmony && s.harmony.length >= 3) {
+      root.style.setProperty("--harmony-1", s.harmony[0]);
+      root.style.setProperty("--harmony-2", s.harmony[1]);
+      root.style.setProperty("--harmony-3", s.harmony[2]);
+    }
+    if (s.bodyFont) root.style.setProperty("--body-font", s.bodyFont);
+    if (s.headingFont) root.style.setProperty("--heading-font", s.headingFont);
+    if (s.headingWeight) root.style.setProperty("--heading-weight", s.headingWeight);
+    if (s.baseSize) root.style.setProperty("--base-size", s.baseSize);
+    if (s.borderRadius) root.style.setProperty("--border-radius", s.borderRadius);
+  }
+
+  /* ---- Utility ---- */
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    var div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  /* ---- Init ---- */
+
+  function renderAll(data) {
+    applyStyles(data);
+    renderNotice(data);
+    renderHeader(data);
+    renderUpdates(data);
+    renderProjects(data);
+    renderInfo(data);
+    renderSkills(data);
+    renderLinks(data);
+  }
+
+  function init() {
+    loadData(function (err, data) {
+      if (err) {
+        var main = document.querySelector(".main-content");
+        if (main) main.innerHTML = "<p>Error loading portfolio data.</p>";
+        return;
+      }
+      renderAll(data);
+    });
+  }
+
+  /* Wait for DOM */
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>
+
