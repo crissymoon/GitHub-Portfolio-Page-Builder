@@ -1555,10 +1555,10 @@
       var jsPDF = window.jspdf.jsPDF;
       var doc = new jsPDF({ unit: "pt", format: "letter" });
       var pageW = doc.internal.pageSize.getWidth();
+      var pageH = doc.internal.pageSize.getHeight();
       var margin = 50;
       var usable = pageW - margin * 2;
       var y = 50;
-      var lineH = 14;
 
       /* Helper: wrap text and return lines */
       function wrapText(text, maxWidth, fontSize) {
@@ -1566,30 +1566,41 @@
         return doc.splitTextToSize(text || "", maxWidth);
       }
 
-      /* Helper: draw a horizontal rule */
-      function drawHR() {
-        doc.setDrawColor(86, 0, 143);
-        doc.setLineWidth(0.5);
-        doc.line(margin, y, pageW - margin, y);
-        y += 8;
+      /* Derive portfolio URL from deploy config */
+      var deployDomain = "";
+      var deployRepo = "";
+      var domainEl = document.getElementById("deploy-domain");
+      var repoEl = document.getElementById("deploy-repo-url");
+      if (domainEl) deployDomain = domainEl.value.trim();
+      if (repoEl) deployRepo = repoEl.value.trim();
+      var portfolioUrl = "";
+      if (deployDomain) {
+        portfolioUrl = "https://" + deployDomain.replace(/^https?:\/\//, "");
+      } else if (deployRepo) {
+        /* derive github.io URL from repo */
+        var m = deployRepo.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
+        if (m) portfolioUrl = "https://" + m[1] + ".github.io/" + m[2];
       }
 
-      /* Name - big and bold */
+      /* ---- Header ---- */
+
+      /* Name */
       var name = (data.info && data.info.name) ? data.info.name : "Name";
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
       doc.text(name, pageW / 2, y, { align: "center" });
-      y += 22;
+      y += 20;
 
       /* Contact line */
       var contactParts = [];
       if (data.info && data.info.email) contactParts.push(data.info.email);
       if (phone && phone.trim()) contactParts.push(phone.trim());
+      if (portfolioUrl) contactParts.push(portfolioUrl);
       if (contactParts.length > 0) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.text(contactParts.join("  |  "), pageW / 2, y, { align: "center" });
-        y += 14;
+        y += 12;
       }
 
       /* Social links line */
@@ -1607,28 +1618,28 @@
             doc.text(socialLines[sl], pageW / 2, y, { align: "center" });
             y += 10;
           }
-          y += 4;
         }
       }
 
-      drawHR();
+      y += 10;
+
+      /* ---- Sections ---- */
 
       /* Bio / Summary */
       if (data.info && data.info.bio) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Summary", margin, y);
-        y += lineH;
+        y += 13;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var bioLines = wrapText(data.info.bio, usable, 9);
         for (var b = 0; b < bioLines.length; b++) {
-          if (y > 730) break;
+          if (y > 720) break;
           doc.text(bioLines[b], margin, y);
-          y += 11;
+          y += 12;
         }
-        y += 6;
-        drawHR();
+        y += 8;
       }
 
       /* Education */
@@ -1636,17 +1647,16 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Education & Technical Background", margin, y);
-        y += lineH;
+        y += 13;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var eduLines = wrapText(data.education.summary, usable, 9);
         for (var e = 0; e < eduLines.length; e++) {
-          if (y > 730) break;
+          if (y > 720) break;
           doc.text(eduLines[e], margin, y);
-          y += 11;
+          y += 12;
         }
-        y += 6;
-        drawHR();
+        y += 8;
       }
 
       /* Skills */
@@ -1654,29 +1664,26 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Skills", margin, y);
-        y += lineH;
+        y += 13;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var skillsText = data.info.skills.join(", ");
         var skillLines = wrapText(skillsText, usable, 9);
         for (var sk = 0; sk < skillLines.length; sk++) {
-          if (y > 730) break;
+          if (y > 720) break;
           doc.text(skillLines[sk], margin, y);
-          y += 11;
+          y += 12;
         }
-        y += 6;
-        drawHR();
+        y += 8;
       }
 
-      /* Projects */
+      /* Projects (max 3) */
       if (data.projects && data.projects.length > 0) {
-        /* Sort by displayOrder */
         var sortedProjects = data.projects.slice().sort(function (a, b) {
           var oa = (typeof a.displayOrder === "number") ? a.displayOrder : 9999;
           var ob = (typeof b.displayOrder === "number") ? b.displayOrder : 9999;
           return oa - ob;
         });
-        /* Filter out empty projects */
         var validProjects = [];
         for (var vp = 0; vp < sortedProjects.length; vp++) {
           if (sortedProjects[vp].title || sortedProjects[vp].description) {
@@ -1684,52 +1691,69 @@
           }
         }
         if (validProjects.length > 0) {
+          var maxProjects = 3;
+          var showCount = Math.min(validProjects.length, maxProjects);
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
           doc.text("Projects", margin, y);
-          y += lineH;
-          for (var pi = 0; pi < validProjects.length; pi++) {
-            if (y > 720) break;
+          y += 13;
+          for (var pi = 0; pi < showCount; pi++) {
+            if (y > 700) break;
             var proj = validProjects[pi];
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
             var projTitle = proj.title || "Untitled";
             if (proj.url) projTitle += "  (" + proj.url + ")";
             doc.text(projTitle, margin + 8, y);
-            y += 11;
+            y += 12;
             if (proj.description) {
               doc.setFont("helvetica", "normal");
               doc.setFontSize(9);
               var descLines = wrapText(proj.description, usable - 16, 9);
               for (var dl = 0; dl < descLines.length; dl++) {
-                if (y > 730) break;
+                if (y > 720) break;
                 doc.text(descLines[dl], margin + 8, y);
-                y += 11;
+                y += 12;
               }
             }
             y += 4;
           }
-          y += 2;
-          drawHR();
+          if (validProjects.length > maxProjects && portfolioUrl) {
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(8);
+            doc.text("Visit " + portfolioUrl + " to view more projects and the live portfolio.", margin + 8, y);
+            y += 12;
+          }
+          y += 8;
         }
       }
 
       /* Links */
       if (data.links && data.links.length > 0) {
-        if (y < 720) {
+        if (y < 700) {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
           doc.text("Links", margin, y);
-          y += lineH;
+          y += 13;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
           for (var li = 0; li < data.links.length; li++) {
-            if (y > 730) break;
+            if (y > 720) break;
             var lnk = data.links[li];
             doc.text((lnk.label || "") + ": " + (lnk.url || ""), margin + 8, y);
-            y += 11;
+            y += 12;
           }
         }
+      }
+
+      /* ---- Footer ---- */
+      if (deployRepo) {
+        var repoClean = deployRepo.replace(/\.git$/, "");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text("This resume was generated using " + repoClean, pageW / 2, pageH - 30, { align: "center" });
+        doc.setTextColor(0, 0, 0);
       }
 
       /* Save */
