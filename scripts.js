@@ -60,6 +60,21 @@
       el.src = data.site.image;
       el.alt = (data.site.title || "Portfolio") + " image";
       el.style.display = "block";
+
+      /* Apply border settings */
+      if (data.site.imageBorder) {
+        var color = data.site.imageBorderColor || "#ffffff";
+        el.style.border = "2px solid " + color;
+      } else {
+        el.style.border = "none";
+      }
+
+      /* Apply size class */
+      el.className = "site-image";
+      var size = data.site.imageSize || "medium";
+      if (size === "small") el.className += " site-image-small";
+      else if (size === "large") el.className += " site-image-large";
+      else el.className += " site-image-medium";
     } else {
       el.style.display = "none";
     }

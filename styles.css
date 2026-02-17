@@ -82,9 +82,24 @@ a:hover {
   width: 96px;
   height: 96px;
   margin: 0 auto 1rem;
-  border: 2px solid #fff;
+  border: none;
   border-radius: 0;
   object-fit: cover;
+}
+
+.site-image.site-image-small {
+  width: 64px;
+  height: 64px;
+}
+
+.site-image.site-image-medium {
+  width: 96px;
+  height: 96px;
+}
+
+.site-image.site-image-large {
+  width: 160px;
+  height: 160px;
 }
 
 .site-header h1 {

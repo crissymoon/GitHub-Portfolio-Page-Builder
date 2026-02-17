@@ -249,6 +249,29 @@
       <img id="site-image-thumb" src="" alt="Preview" style="width:64px;height:64px;object-fit:cover;border:1px solid #ccc;border-radius:0;">
     </div>
   </div>
+  <div class="field-row">
+    <label>Image Size</label>
+    <div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:8px;">
+      <select id="image-size" style="font-family:var(--mgr-font);font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--mgr-border);border-radius:0;background:#fff;">
+        <option value="small">Small (64px)</option>
+        <option value="medium" selected>Medium (96px)</option>
+        <option value="large">Large (160px)</option>
+      </select>
+    </div>
+  </div>
+  <div class="field-row">
+    <label>Image Border</label>
+    <div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:12px;flex-wrap:wrap;">
+      <label style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:4px;min-width:auto;margin-bottom:0;font-weight:400;font-size:0.85rem;">
+        <input type="checkbox" id="image-border-toggle" checked> Show border
+      </label>
+      <div class="color-row" style="margin-bottom:0;">
+        <label style="min-width:auto;margin-bottom:0;">Color</label>
+        <input type="color" id="image-border-color" value="#ffffff">
+        <input type="text" id="image-border-color-text" value="#ffffff" style="width:80px;margin-bottom:0;">
+      </div>
+    </div>
+  </div>
 
   <!-- Notice -->
   <h2>Notice</h2>
@@ -398,6 +421,17 @@
 
       // Show portfolio image preview if one exists
       showImagePreview(data.site && data.site.image ? data.site.image : "");
+
+      // Populate image settings
+      if (data.site) {
+        var hasBorder = data.site.imageBorder !== false;
+        document.getElementById("image-border-toggle").checked = hasBorder;
+        var borderColor = data.site.imageBorderColor || "#ffffff";
+        document.getElementById("image-border-color").value = borderColor;
+        document.getElementById("image-border-color-text").value = borderColor;
+        var imgSize = data.site.imageSize || "medium";
+        document.getElementById("image-size").value = imgSize;
+      }
 
       renderSkills();
       renderProjects();
@@ -573,6 +607,9 @@
     /* ---- Save / Download ---- */
     function collectFormData() {
       data.site.title = document.getElementById("site-title").value;
+      data.site.imageBorder = document.getElementById("image-border-toggle").checked;
+      data.site.imageBorderColor = document.getElementById("image-border-color").value;
+      data.site.imageSize = document.getElementById("image-size").value;
       data.notice.text = document.getElementById("notice-text").value;
       data.notice.link = document.getElementById("notice-link").value;
       data.notice.updated = document.getElementById("notice-updated").value;
@@ -702,6 +739,24 @@
         removeBtn.style.display = "none";
       }
     }
+
+    /* ---- Image Border Color Sync ---- */
+    (function () {
+      document.addEventListener("DOMContentLoaded", function () {
+        var colorPicker = document.getElementById("image-border-color");
+        var colorText = document.getElementById("image-border-color-text");
+        if (colorPicker && colorText) {
+          colorPicker.addEventListener("input", function () {
+            colorText.value = colorPicker.value;
+          });
+          colorText.addEventListener("input", function () {
+            if (/^#[0-9a-fA-F]{6}$/.test(colorText.value)) {
+              colorPicker.value = colorText.value;
+            }
+          });
+        }
+      });
+    })();
 
     /* ---- AI Content Generation ---- */
 
