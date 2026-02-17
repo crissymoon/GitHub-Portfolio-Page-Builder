@@ -309,6 +309,130 @@ static void handle_api_build(sock_t client) {
     }
 }
 
+/* Handle GET /api/deploy-config - read deploy.conf */
+static void handle_api_deploy_config_get(sock_t client) {
+    FILE *f = fopen("deploy.conf", "r");
+    if (!f) {
+        const char *empty = "{\"repo\":\"\"}";
+        send_response(client, 200, "OK", "application/json; charset=utf-8",
+                      empty, (long)strlen(empty));
+        return;
+    }
+    char line[1024];
+    char repo[1024] = {0};
+    while (fgets(line, sizeof(line), f)) {
+        /* Trim */
+        int len = (int)strlen(line);
+        while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' ||
+                           line[len-1] == ' ')) line[--len] = '\0';
+        if (line[0] == '#' || line[0] == '\0') continue;
+        if (strncmp(line, "repo=", 5) == 0) {
+            strncpy(repo, line + 5, sizeof(repo) - 1);
+            break;
+        }
+    }
+    fclose(f);
+
+    char json[2048];
+    snprintf(json, sizeof(json), "{\"repo\":\"%s\"}", repo);
+    send_response(client, 200, "OK", "application/json; charset=utf-8",
+                  json, (long)strlen(json));
+}
+
+/* Handle POST /api/deploy-config - write deploy.conf */
+static void handle_api_deploy_config_post(sock_t client, const char *headers, int headers_len) {
+    long body_len = 0;
+    char *body = read_request_body(client, headers, headers_len, &body_len);
+    if (!body || body_len == 0) {
+        send_error(client, 400, "Bad Request");
+        if (body) free(body);
+        return;
+    }
+
+    /* Simple JSON parse for {"repo":"..."} */
+    char repo[1024] = {0};
+    char *rk = strstr(body, "\"repo\"");
+    if (rk) {
+        char *colon = strchr(rk + 6, ':');
+        if (colon) {
+            char *q1 = strchr(colon, '"');
+            if (q1) {
+                q1++;
+                char *q2 = strchr(q1, '"');
+                if (q2 && (q2 - q1) < (int)sizeof(repo)) {
+                    memcpy(repo, q1, q2 - q1);
+                    repo[q2 - q1] = '\0';
+                }
+            }
+        }
+    }
+    free(body);
+
+    FILE *f = fopen("deploy.conf", "w");
+    if (!f) {
+        const char *msg = "{\"error\":\"Failed to write deploy.conf\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    }
+    fprintf(f, "# deploy.conf - GitHub Pages deploy target\n");
+    fprintf(f, "repo=%s\n", repo);
+    fclose(f);
+
+    printf("Saved deploy.conf: %s\n", repo);
+    const char *ok = "{\"ok\":true,\"message\":\"Deploy config saved\"}";
+    send_response(client, 200, "OK", "application/json; charset=utf-8",
+                  ok, (long)strlen(ok));
+}
+
+/* Handle POST /api/deploy - run the deploy tool */
+static void handle_api_deploy(sock_t client) {
+    int rc;
+    #ifdef _WIN32
+    struct stat st;
+    if (stat("deploy\\deploy.exe", &st) == 0) {
+        rc = system("deploy\\deploy.exe");
+    } else if (stat("deploy\\deploy.c", &st) == 0) {
+        const char *msg = "{\"error\":\"deploy.exe not compiled. Run: cd deploy && cl deploy.c /Fe:deploy.exe\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    } else {
+        const char *msg = "{\"error\":\"No deploy tool found in deploy/ directory\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    }
+    #else
+    struct stat st;
+    if (stat("deploy/deploy", &st) == 0) {
+        rc = system("./deploy/deploy");
+    } else if (stat("deploy/deploy.c", &st) == 0) {
+        const char *msg = "{\"error\":\"deploy binary not compiled. Run: cd deploy && cc -O2 -o deploy deploy.c\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    } else {
+        const char *msg = "{\"error\":\"No deploy tool found in deploy/ directory\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    }
+    #endif
+
+    if (rc == 0) {
+        printf("Deploy completed successfully.\n");
+        const char *ok = "{\"ok\":true,\"message\":\"Deploy completed successfully\"}";
+        send_response(client, 200, "OK", "application/json; charset=utf-8",
+                      ok, (long)strlen(ok));
+    } else {
+        printf("Deploy failed with exit code %d.\n", rc);
+        const char *msg = "{\"error\":\"Deploy failed. Check terminal for details.\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+    }
+}
+
 static void handle_request(sock_t client) {
     /* Use a larger buffer for POST bodies */
     char buf[65536];
@@ -335,7 +459,21 @@ static void handle_request(sock_t client) {
             handle_api_build(client);
             return;
         }
+        if (strcmp(raw_path, "/api/deploy") == 0) {
+            handle_api_deploy(client);
+            return;
+        }
+        if (strcmp(raw_path, "/api/deploy-config") == 0) {
+            handle_api_deploy_config_post(client, buf, n);
+            return;
+        }
         send_error(client, 404, "Not Found");
+        return;
+    }
+
+    /* Handle GET endpoints */
+    if (strcmp(method, "GET") == 0 && strcmp(raw_path, "/api/deploy-config") == 0) {
+        handle_api_deploy_config_get(client);
         return;
     }
 

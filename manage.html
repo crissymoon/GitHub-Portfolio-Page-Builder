@@ -363,6 +363,15 @@
   <button onclick="viewPortfolio()">View Portfolio</button>
   <span id="action-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
 
+  <!-- Deploy -->
+  <h2>Deploy to GitHub Pages</h2>
+  <div style="display:-webkit-flex;display:flex;gap:0.5rem;margin-bottom:0.5rem;-webkit-flex-wrap:wrap;flex-wrap:wrap;">
+    <input type="text" id="deploy-repo-url" placeholder="https://github.com/user/repo.git" style="flex:1;-webkit-flex:1;min-width:250px;">
+    <button onclick="saveDeployConfig()">Save URL</button>
+  </div>
+  <button class="primary-btn" onclick="deployPortfolio()">Deploy</button>
+  <span id="deploy-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
+
   <div id="output-area"></div>
 
   <script>
@@ -704,6 +713,91 @@
       window.open("index.html", "_blank");
     }
 
+    /* ---- Deploy ---- */
+
+    function loadDeployConfig() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/api/deploy-config", true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          try {
+            var cfg = JSON.parse(xhr.responseText);
+            if (cfg.repo) {
+              document.getElementById("deploy-repo-url").value = cfg.repo;
+            }
+          } catch (e) {}
+        }
+      };
+      xhr.send();
+    }
+
+    function saveDeployConfig() {
+      var url = document.getElementById("deploy-repo-url").value.trim();
+      if (!url) {
+        document.getElementById("deploy-status").textContent = "Enter a repo URL first.";
+        return;
+      }
+      var status = document.getElementById("deploy-status");
+      status.textContent = "Saving config...";
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/deploy-config", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          status.textContent = "Deploy URL saved.";
+          setTimeout(function () { status.textContent = ""; }, 3000);
+        } else {
+          status.textContent = "Failed to save config.";
+        }
+      };
+      xhr.send(JSON.stringify({ repo: url }));
+    }
+
+    function deployPortfolio() {
+      var url = document.getElementById("deploy-repo-url").value.trim();
+      if (!url) {
+        document.getElementById("deploy-status").textContent = "Enter a GitHub Pages repo URL first.";
+        return;
+      }
+      var status = document.getElementById("deploy-status");
+
+      /* Save config first, then deploy */
+      status.textContent = "Saving config...";
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/deploy-config", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          status.textContent = "Deploying... (this may take a moment)";
+          var xhr2 = new XMLHttpRequest();
+          xhr2.open("POST", "/api/deploy", true);
+          xhr2.timeout = 120000; /* 2 minute timeout for push */
+          xhr2.onreadystatechange = function () {
+            if (xhr2.readyState !== 4) return;
+            if (xhr2.status === 200) {
+              status.textContent = "Deploy complete. Site is live.";
+              setTimeout(function () { status.textContent = ""; }, 8000);
+            } else {
+              var msg = "Deploy failed.";
+              try { msg = JSON.parse(xhr2.responseText).error || msg; } catch (e) {}
+              status.textContent = msg;
+            }
+          };
+          xhr2.ontimeout = function () {
+            status.textContent = "Deploy timed out. Check terminal.";
+          };
+          xhr2.send();
+        } else {
+          status.textContent = "Failed to save config.";
+        }
+      };
+      xhr.send(JSON.stringify({ repo: url }));
+    }
+
     /* ---- Portfolio Image ---- */
 
     function handleImageUpload(input) {
@@ -1003,6 +1097,7 @@
 
     /* ---- Init ---- */
     loadData();
+    loadDeployConfig();
   </script>
 </body>
 </html>
