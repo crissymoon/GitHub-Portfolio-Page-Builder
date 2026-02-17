@@ -245,6 +245,68 @@
       justify-content: flex-end;
       margin-bottom: 1rem;
     }
+    .agent-chat-log {
+      border: 1px solid var(--mgr-border);
+      background: #fafafa;
+      padding: 0.75rem;
+      min-height: 120px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .agent-msg {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--mgr-border);
+      background: #fff;
+    }
+    .agent-msg.user {
+      border-left: 3px solid var(--mgr-primary);
+      background: var(--mgr-secondary);
+    }
+    .agent-msg.agent {
+      border-left: 3px solid var(--mgr-accent);
+    }
+    .agent-msg.system {
+      border-left: 3px solid #888;
+      color: #666;
+      font-size: 0.8rem;
+    }
+    .agent-msg-label {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--mgr-primary);
+      margin-bottom: 0.2rem;
+    }
+    .agent-msg.agent .agent-msg-label {
+      color: var(--mgr-accent);
+    }
+    .agent-msg.system .agent-msg-label {
+      color: #888;
+    }
+    .agent-input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .agent-input-row textarea {
+      flex: 1;
+      margin-bottom: 0;
+      min-height: 40px;
+      resize: vertical;
+    }
+    .agent-deploy-prompt {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid var(--mgr-primary);
+      background: var(--mgr-secondary);
+      font-size: 0.85rem;
+    }
+    .agent-deploy-prompt button {
+      margin-top: 0.5rem;
+    }
     @media (max-width: 480px) {
       body { padding: 1rem; }
       .color-row { flex-wrap: wrap; }
@@ -531,6 +593,18 @@
   <button class="primary-btn" onclick="deployPortfolio()">Save, Build + Deploy</button>
   <span id="deploy-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
 
+  </div>
+
+  <!-- Portfolio Agent -->
+  <h2 class="section-heading collapsed" onclick="toggleSection(this)">Portfolio Agent</h2>
+  <p class="section-desc">Chat with an AI agent to make edits to your portfolio using natural language. Requires an API key.</p>
+  <div class="section-body collapsed">
+  <div class="agent-chat-log" id="agent-chat-log"></div>
+  <div class="agent-input-row">
+    <textarea id="agent-input" placeholder="Tell the agent what to change, e.g. 'Change the site title to My Portfolio'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agentSend();}"></textarea>
+    <button class="primary-btn" onclick="agentSend()" id="agent-send-btn">Send</button>
+  </div>
+  <div id="agent-deploy-area"></div>
   </div>
 
   <div id="output-area"></div>
@@ -1759,6 +1833,271 @@
       /* Save */
       var fileName = (name || "resume").replace(/[^a-zA-Z0-9]/g, "_") + "_Resume.pdf";
       doc.save(fileName);
+    }
+
+    /* ---- Portfolio Agent ---- */
+
+    var agentHistory = [];
+
+    function agentAppendMsg(role, text) {
+      var log = document.getElementById("agent-chat-log");
+      var div = document.createElement("div");
+      div.className = "agent-msg " + role;
+      var label = document.createElement("div");
+      label.className = "agent-msg-label";
+      label.textContent = role === "user" ? "You" : role === "agent" ? "Agent" : "System";
+      div.appendChild(label);
+      var body = document.createElement("div");
+      body.textContent = text;
+      div.appendChild(body);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function agentSend() {
+      var input = document.getElementById("agent-input");
+      var msg = input.value.trim();
+      if (!msg) return;
+
+      var apiKey = getApiKey();
+      if (!apiKey) {
+        agentAppendMsg("system", "No API key found. Configure one in the AI Content Generation section first.");
+        return;
+      }
+
+      input.value = "";
+      agentAppendMsg("user", msg);
+
+      var sendBtn = document.getElementById("agent-send-btn");
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Thinking...";
+
+      /* Collect current data to send as context */
+      collectFormData();
+      var currentJson = JSON.stringify(data, null, 2);
+
+      /* Strip the base64 image to keep token count reasonable */
+      var contextData = JSON.parse(currentJson);
+      if (contextData.site && contextData.site.image) {
+        contextData.site.image = "[base64 image data omitted]";
+      }
+      var contextJson = JSON.stringify(contextData, null, 2);
+
+      var systemPrompt = [
+        "You are a portfolio editor agent. The user will give you a natural language instruction to modify their portfolio.",
+        "Here is the current portfolio JSON data:",
+        "",
+        contextJson,
+        "",
+        "Respond with ONLY a valid JSON object with two fields:",
+        "1. 'explanation' - a brief one or two sentence description of what you changed.",
+        "2. 'data' - the complete updated portfolio JSON with your changes applied.",
+        "",
+        "Important rules:",
+        "- Return the COMPLETE portfolio JSON in the 'data' field, not just the changed parts.",
+        "- If the field 'site.image' was '[base64 image data omitted]', preserve it exactly as that placeholder string. Do not remove it or change it.",
+        "- Do not add emoji characters anywhere in the data.",
+        "- Do not use border-radius in any style values.",
+        "- Preserve all existing fields and values that the user did not ask to change.",
+        "- If the user asks something you cannot do by editing JSON (like uploading an image), explain in the 'explanation' field and return the data unchanged.",
+        "- Return nothing outside the JSON object. No markdown fences, no commentary."
+      ].join("\n");
+
+      agentHistory.push({ role: "user", content: msg });
+
+      var messages = [
+        { role: "system", content: systemPrompt }
+      ];
+      /* Include last few exchanges for context */
+      var histStart = Math.max(0, agentHistory.length - 6);
+      for (var i = histStart; i < agentHistory.length; i++) {
+        messages.push(agentHistory[i]);
+      }
+
+      var model = getModel();
+      var body = JSON.stringify({
+        model: model,
+        messages: messages,
+        temperature: 0.3,
+        max_tokens: 4000
+      });
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://api.openai.com/v1/chat/completions", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.setRequestHeader("Authorization", "Bearer " + apiKey);
+      xhr.timeout = 60000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send";
+
+        if (xhr.status !== 200) {
+          var errMsg = "API request failed (status " + xhr.status + ").";
+          try {
+            var errResp = JSON.parse(xhr.responseText);
+            if (errResp.error && errResp.error.message) errMsg = errResp.error.message;
+          } catch (e) {}
+          agentAppendMsg("system", errMsg);
+          return;
+        }
+
+        try {
+          var resp = JSON.parse(xhr.responseText);
+          var content = resp.choices[0].message.content.trim();
+          agentHistory.push({ role: "assistant", content: content });
+
+          /* Try to parse the response as JSON */
+          var parsed = null;
+          try {
+            parsed = JSON.parse(content);
+          } catch (e) {
+            /* Try to extract JSON from markdown fences */
+            var fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (fenceMatch) {
+              try { parsed = JSON.parse(fenceMatch[1].trim()); } catch (e2) {}
+            }
+          }
+
+          if (!parsed || !parsed.data) {
+            agentAppendMsg("agent", content);
+            agentAppendMsg("system", "The agent did not return a valid edit. Try rephrasing your request.");
+            return;
+          }
+
+          agentAppendMsg("agent", parsed.explanation || "Changes applied.");
+
+          /* Restore the base64 image if it was placeholder */
+          if (parsed.data.site && parsed.data.site.image === "[base64 image data omitted]") {
+            parsed.data.site.image = data.site.image || "";
+          }
+
+          /* Apply the new data */
+          data = parsed.data;
+          populateForm();
+
+          /* Save and build */
+          agentAppendMsg("system", "Saving and building...");
+          agentSaveAndBuild();
+
+        } catch (e) {
+          agentAppendMsg("system", "Failed to parse agent response: " + e.message);
+        }
+      };
+      xhr.ontimeout = function () {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send";
+        agentAppendMsg("system", "Request timed out. Try again.");
+      };
+      xhr.send(body);
+    }
+
+    function agentSaveAndBuild() {
+      var json = JSON.stringify(data, null, 2);
+
+      /* Save */
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/save", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status !== 200) {
+          agentAppendMsg("system", "Save failed.");
+          return;
+        }
+
+        /* Build */
+        var xhr2 = new XMLHttpRequest();
+        xhr2.open("POST", "/api/build", true);
+        xhr2.onreadystatechange = function () {
+          if (xhr2.readyState !== 4) return;
+          if (xhr2.status !== 200) {
+            agentAppendMsg("system", "Build failed.");
+            return;
+          }
+
+          agentAppendMsg("system", "Build complete. Opening preview...");
+
+          /* Open preview in new tab */
+          window.open("index.html", "_blank");
+
+          /* Show deploy prompt */
+          agentShowDeployPrompt();
+        };
+        xhr2.send();
+      };
+      xhr.send(json);
+    }
+
+    function agentShowDeployPrompt() {
+      var area = document.getElementById("agent-deploy-area");
+      var repoEl = document.getElementById("deploy-repo-url");
+      var domainEl = document.getElementById("deploy-domain");
+      var repo = repoEl ? repoEl.value.trim() : "";
+      var domain = domainEl ? domainEl.value.trim() : "";
+
+      if (!repo) {
+        area.innerHTML = '<div class="agent-deploy-prompt">' +
+          '<strong>No deploy repo configured.</strong> Set up your GitHub Pages repo in the Deploy section to enable live deployment.' +
+          '</div>';
+        return;
+      }
+
+      var target = domain ? "https://" + domain : "your GitHub Pages site";
+      area.innerHTML = '<div class="agent-deploy-prompt">' +
+        '<strong>Deploy this live?</strong> Push these changes to ' + esc(target) + '?' +
+        '<br>' +
+        '<button class="primary-btn" onclick="agentDeploy()">Yes, Deploy Live</button>' +
+        '<button onclick="agentDismissDeploy()">No, Keep as Preview</button>' +
+        '</div>';
+    }
+
+    function agentDeploy() {
+      var area = document.getElementById("agent-deploy-area");
+      area.innerHTML = '';
+      agentAppendMsg("system", "Deploying live...");
+
+      /* Save deploy config first */
+      var repo = (document.getElementById("deploy-repo-url").value || "").trim();
+      var domain = (document.getElementById("deploy-domain").value || "").trim();
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/deploy-config", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status !== 200) {
+          agentAppendMsg("system", "Failed to save deploy config.");
+          return;
+        }
+
+        /* Deploy */
+        var xhr2 = new XMLHttpRequest();
+        xhr2.open("POST", "/api/deploy", true);
+        xhr2.timeout = 120000;
+        xhr2.onreadystatechange = function () {
+          if (xhr2.readyState !== 4) return;
+          if (xhr2.status === 200) {
+            var liveUrl = domain ? "https://" + domain + "/" : "";
+            agentAppendMsg("agent", "Deploy complete." + (liveUrl ? " Live at " + liveUrl : ""));
+          } else {
+            var msg = "Deploy failed.";
+            try { msg = JSON.parse(xhr2.responseText).error || msg; } catch (e) {}
+            agentAppendMsg("system", msg);
+          }
+        };
+        xhr2.ontimeout = function () {
+          agentAppendMsg("system", "Deploy timed out.");
+        };
+        xhr2.send();
+      };
+      xhr.send(JSON.stringify({ repo: repo, domain: domain }));
+    }
+
+    function agentDismissDeploy() {
+      var area = document.getElementById("agent-deploy-area");
+      area.innerHTML = '';
+      agentAppendMsg("system", "Changes kept as preview only. You can deploy later from the Deploy section.");
     }
 
     /* ---- Utility ---- */
