@@ -38,6 +38,9 @@ A single-page portfolio system built with HTML, CSS, vanilla JavaScript, C, and 
 ├── cmds/               # Agent tool-call utilities
 │   ├── run.c           # Cross-platform command runner with approval gate
 │   └── README.md       # Documentation for the command runner
+├── img_convert/        # Image-to-base64 conversion utility
+│   ├── convert.c       # Cross-platform image encoder (C, no dependencies)
+│   └── README.md       # Documentation for the converter
 └── build/              # Output directory (generated)
     ├── index.html
     ├── projects.html
@@ -313,6 +316,35 @@ cc -O2 -o run run.c --sysroot="$(xcrun --show-sdk-path)"
 The tool prints the command for review, waits for approval, runs it if approved, and outputs a structured JSON result. It also supports `--json` mode for agent tool-call protocols (pipe `{"cmd": "..."}` on stdin) and `--log` for an append-only audit trail.
 
 See [cmds/README.md](cmds/README.md) for full documentation including flags, exit codes, output format, integration patterns, and security notes.
+
+---
+
+## Image Converter
+
+The `img_convert/` directory contains a cross-platform C tool that converts image files into base64 data URLs. The encoded output embeds directly in HTML, CSS, or JSON, which means the built portfolio pages are fully self-contained with no external image references. This works on GitHub Pages and any other static host.
+
+### Build
+
+```sh
+cd img_convert
+gcc -O2 -o convert convert.c
+```
+
+On macOS, if headers are not found:
+
+```sh
+cc -O2 -o convert convert.c --sysroot="$(xcrun --show-sdk-path)"
+```
+
+### Quick Example
+
+```sh
+./img_convert/convert avatar.png
+```
+
+Outputs a `data:image/png;base64,...` string. Paste it into the `site.image` field in `crissy-data.json`, or use `--json`, `--field`, `--css`, or `--html` flags for different output formats. Supports PNG, JPEG, GIF, SVG, WebP, ICO, BMP, TIFF, and AVIF.
+
+See [img_convert/README.md](img_convert/README.md) for full documentation including output modes, workflow examples, and size guidelines.
 
 ---
 
