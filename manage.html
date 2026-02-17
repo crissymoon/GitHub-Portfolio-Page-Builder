@@ -320,6 +320,45 @@
     .agent-deploy-prompt button {
       margin-top: 0.5rem;
     }
+    .agent-loading {
+      display: inline-block;
+      font-size: 0.85rem;
+      color: var(--mgr-primary);
+      padding: 0.5rem 0.75rem;
+    }
+    .agent-loading::after {
+      content: '';
+      animation: agentDots 1.2s steps(4, end) infinite;
+    }
+    @keyframes agentDots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+    .agent-streaming .agent-msg-body {
+      border-right: 2px solid var(--mgr-accent);
+      animation: agentCursor 0.6s step-end infinite;
+    }
+    @keyframes agentCursor {
+      0%, 100% { border-color: var(--mgr-accent); }
+      50% { border-color: transparent; }
+    }
+    .mgr-footer {
+      margin-top: 3rem;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--mgr-border);
+      text-align: center;
+      font-size: 0.75rem;
+      color: #999;
+    }
+    .mgr-footer a {
+      color: var(--mgr-primary);
+      text-decoration: none;
+    }
+    .mgr-footer a:hover {
+      text-decoration: underline;
+    }
     @media (max-width: 480px) {
       body { padding: 1rem; }
       .color-row { flex-wrap: wrap; }
@@ -621,6 +660,10 @@
   </div>
 
   <div id="output-area"></div>
+
+  <footer class="mgr-footer">
+    Portfolio Manager -- <a href="https://github.com/crissymoon/GitHub-Portfolio-Page-Builder" target="_blank">GitHub-Portfolio-Page-Builder</a>
+  </footer>
 
   <script>
     var data = null;
@@ -1851,6 +1894,8 @@
     /* ---- Portfolio Agent ---- */
 
     var agentHistory = [];
+    var agentStreamDiv = null;
+    var agentStreamBody = null;
 
     function agentAppendMsg(role, text) {
       var log = document.getElementById("agent-chat-log");
@@ -1861,10 +1906,66 @@
       label.textContent = role === "user" ? "You" : role === "agent" ? "Agent" : "System";
       div.appendChild(label);
       var body = document.createElement("div");
+      body.className = "agent-msg-body";
       body.textContent = text;
       div.appendChild(body);
       log.appendChild(div);
       log.scrollTop = log.scrollHeight;
+      return { div: div, body: body };
+    }
+
+    function agentShowLoading() {
+      var log = document.getElementById("agent-chat-log");
+      var div = document.createElement("div");
+      div.className = "agent-msg agent";
+      div.id = "agent-loading-msg";
+      var label = document.createElement("div");
+      label.className = "agent-msg-label";
+      label.textContent = "Agent";
+      div.appendChild(label);
+      var dots = document.createElement("div");
+      dots.className = "agent-loading";
+      dots.textContent = "Thinking";
+      div.appendChild(dots);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function agentHideLoading() {
+      var el = document.getElementById("agent-loading-msg");
+      if (el) el.parentNode.removeChild(el);
+    }
+
+    function agentStartStreamMsg() {
+      var log = document.getElementById("agent-chat-log");
+      var div = document.createElement("div");
+      div.className = "agent-msg agent agent-streaming";
+      var label = document.createElement("div");
+      label.className = "agent-msg-label";
+      label.textContent = "Agent";
+      div.appendChild(label);
+      var body = document.createElement("div");
+      body.className = "agent-msg-body";
+      div.appendChild(body);
+      log.appendChild(div);
+      agentStreamDiv = div;
+      agentStreamBody = body;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function agentStreamAppend(text) {
+      if (!agentStreamBody) return;
+      agentStreamBody.textContent += text;
+      var log = document.getElementById("agent-chat-log");
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function agentEndStream() {
+      if (agentStreamDiv) {
+        agentStreamDiv.classList.remove("agent-streaming");
+      }
+      agentStreamDiv = null;
+      agentStreamBody = null;
     }
 
     function agentSend() {
@@ -1883,7 +1984,9 @@
 
       var sendBtn = document.getElementById("agent-send-btn");
       sendBtn.disabled = true;
-      sendBtn.textContent = "Thinking...";
+      sendBtn.textContent = "...";
+
+      agentShowLoading();
 
       /* Collect current data to send as context */
       collectFormData();
@@ -1921,88 +2024,132 @@
       var messages = [
         { role: "system", content: systemPrompt }
       ];
-      /* Include last few exchanges for context */
       var histStart = Math.max(0, agentHistory.length - 6);
       for (var i = histStart; i < agentHistory.length; i++) {
         messages.push(agentHistory[i]);
       }
 
       var model = getModel();
-      var body = JSON.stringify({
+      var reqBody = JSON.stringify({
         model: model,
         messages: messages,
         temperature: 0.3,
-        max_completion_tokens: 4000
+        max_completion_tokens: 4000,
+        stream: true
       });
 
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://api.openai.com/v1/chat/completions", true);
-      xhr.setRequestHeader("Content-Type", "application/json");
-      xhr.setRequestHeader("Authorization", "Bearer " + apiKey);
-      xhr.timeout = 60000;
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState !== 4) return;
-        sendBtn.disabled = false;
-        sendBtn.textContent = "Send";
+      /* Use fetch + ReadableStream for streaming */
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: reqBody
+      }).then(function (response) {
+        agentHideLoading();
 
-        if (xhr.status !== 200) {
-          var errMsg = "API request failed (status " + xhr.status + ").";
-          try {
-            var errResp = JSON.parse(xhr.responseText);
-            if (errResp.error && errResp.error.message) errMsg = errResp.error.message;
-          } catch (e) {}
-          agentAppendMsg("system", errMsg);
-          return;
+        if (!response.ok) {
+          return response.text().then(function (text) {
+            var errMsg = "API request failed (status " + response.status + ").";
+            try {
+              var errResp = JSON.parse(text);
+              if (errResp.error && errResp.error.message) errMsg = errResp.error.message;
+            } catch (e) {}
+            agentAppendMsg("system", errMsg);
+            sendBtn.disabled = false;
+            sendBtn.textContent = "Send";
+          });
         }
 
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          var content = resp.choices[0].message.content.trim();
-          agentHistory.push({ role: "assistant", content: content });
+        agentStartStreamMsg();
+        var fullContent = "";
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
 
-          /* Try to parse the response as JSON */
-          var parsed = null;
-          try {
-            parsed = JSON.parse(content);
-          } catch (e) {
-            /* Try to extract JSON from markdown fences */
-            var fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-            if (fenceMatch) {
-              try { parsed = JSON.parse(fenceMatch[1].trim()); } catch (e2) {}
+        function processStream() {
+          return reader.read().then(function (result) {
+            if (result.done) {
+              var streamMsgDiv = agentStreamDiv;
+              agentEndStream();
+              sendBtn.disabled = false;
+              sendBtn.textContent = "Send";
+              agentProcessResponse(fullContent, streamMsgDiv);
+              return;
             }
-          }
 
-          if (!parsed || !parsed.data) {
-            agentAppendMsg("agent", content);
-            agentAppendMsg("system", "The agent did not return a valid edit. Try rephrasing your request.");
-            return;
-          }
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split("\n");
+            buffer = lines.pop() || "";
 
-          agentAppendMsg("agent", parsed.explanation || "Changes applied.");
-
-          /* Restore the base64 image if it was placeholder */
-          if (parsed.data.site && parsed.data.site.image === "[base64 image data omitted]") {
-            parsed.data.site.image = data.site.image || "";
-          }
-
-          /* Apply the new data */
-          data = parsed.data;
-          populateForm();
-
-          /* Save and build */
-          agentAppendMsg("system", "Saving and building...");
-          agentSaveAndBuild();
-
-        } catch (e) {
-          agentAppendMsg("system", "Failed to parse agent response: " + e.message);
+            for (var li = 0; li < lines.length; li++) {
+              var line = lines[li].trim();
+              if (!line || !line.startsWith("data: ")) continue;
+              var payload = line.substring(6);
+              if (payload === "[DONE]") continue;
+              try {
+                var chunk = JSON.parse(payload);
+                var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
+                if (delta && delta.content) {
+                  fullContent += delta.content;
+                  agentStreamAppend(delta.content);
+                }
+              } catch (e) {}
+            }
+            return processStream();
+          });
         }
-      };
-      xhr.ontimeout = function () {
+
+        return processStream();
+      }).catch(function (err) {
+        agentHideLoading();
+        agentEndStream();
         sendBtn.disabled = false;
         sendBtn.textContent = "Send";
-        agentAppendMsg("system", "Request timed out. Try again.");
-      };
-      xhr.send(body);
+        agentAppendMsg("system", "Request failed: " + err.message);
+      });
+    }
+
+    function agentProcessResponse(content, streamMsgDiv) {
+      content = content.trim();
+      agentHistory.push({ role: "assistant", content: content });
+
+      /* Try to parse the response as JSON */
+      var parsed = null;
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {
+        /* Try to extract JSON from markdown fences */
+        var fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (fenceMatch) {
+          try { parsed = JSON.parse(fenceMatch[1].trim()); } catch (e2) {}
+        }
+      }
+
+      if (!parsed || !parsed.data) {
+        agentAppendMsg("system", "The agent did not return a valid edit. Try rephrasing your request.");
+        return;
+      }
+
+      /* Replace streaming msg with just the explanation */
+      if (streamMsgDiv && streamMsgDiv.parentNode) {
+        streamMsgDiv.parentNode.removeChild(streamMsgDiv);
+      }
+      agentAppendMsg("agent", parsed.explanation || "Changes applied.");
+
+      /* Restore the base64 image if it was placeholder */
+      if (parsed.data.site && parsed.data.site.image === "[base64 image data omitted]") {
+        parsed.data.site.image = data.site.image || "";
+      }
+
+      /* Apply the new data */
+      data = parsed.data;
+      populateForm();
+
+      /* Save and build */
+      agentAppendMsg("system", "Saving and building...");
+      agentSaveAndBuild();
     }
 
     function agentSaveAndBuild() {
