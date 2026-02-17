@@ -313,28 +313,29 @@ static void handle_api_build(sock_t client) {
 static void handle_api_deploy_config_get(sock_t client) {
     FILE *f = fopen("deploy.conf", "r");
     if (!f) {
-        const char *empty = "{\"repo\":\"\"}";
+        const char *empty = "{\"repo\":\"\",\"domain\":\"\"}";
         send_response(client, 200, "OK", "application/json; charset=utf-8",
                       empty, (long)strlen(empty));
         return;
     }
     char line[1024];
     char repo[1024] = {0};
+    char domain[256] = {0};
     while (fgets(line, sizeof(line), f)) {
-        /* Trim */
         int len = (int)strlen(line);
         while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' ||
                            line[len-1] == ' ')) line[--len] = '\0';
         if (line[0] == '#' || line[0] == '\0') continue;
         if (strncmp(line, "repo=", 5) == 0) {
             strncpy(repo, line + 5, sizeof(repo) - 1);
-            break;
+        } else if (strncmp(line, "domain=", 7) == 0) {
+            strncpy(domain, line + 7, sizeof(domain) - 1);
         }
     }
     fclose(f);
 
     char json[2048];
-    snprintf(json, sizeof(json), "{\"repo\":\"%s\"}", repo);
+    snprintf(json, sizeof(json), "{\"repo\":\"%s\",\"domain\":\"%s\"}", repo, domain);
     send_response(client, 200, "OK", "application/json; charset=utf-8",
                   json, (long)strlen(json));
 }
@@ -349,8 +350,9 @@ static void handle_api_deploy_config_post(sock_t client, const char *headers, in
         return;
     }
 
-    /* Simple JSON parse for {"repo":"..."} */
+    /* Simple JSON parse for {"repo":"...","domain":"..."} */
     char repo[1024] = {0};
+    char domain[256] = {0};
     char *rk = strstr(body, "\"repo\"");
     if (rk) {
         char *colon = strchr(rk + 6, ':');
@@ -366,6 +368,21 @@ static void handle_api_deploy_config_post(sock_t client, const char *headers, in
             }
         }
     }
+    char *dk = strstr(body, "\"domain\"");
+    if (dk) {
+        char *colon = strchr(dk + 8, ':');
+        if (colon) {
+            char *q1 = strchr(colon, '"');
+            if (q1) {
+                q1++;
+                char *q2 = strchr(q1, '"');
+                if (q2 && (q2 - q1) < (int)sizeof(domain)) {
+                    memcpy(domain, q1, q2 - q1);
+                    domain[q2 - q1] = '\0';
+                }
+            }
+        }
+    }
     free(body);
 
     FILE *f = fopen("deploy.conf", "w");
@@ -377,9 +394,12 @@ static void handle_api_deploy_config_post(sock_t client, const char *headers, in
     }
     fprintf(f, "# deploy.conf - GitHub Pages deploy target\n");
     fprintf(f, "repo=%s\n", repo);
+    if (domain[0]) {
+        fprintf(f, "domain=%s\n", domain);
+    }
     fclose(f);
 
-    printf("Saved deploy.conf: %s\n", repo);
+    printf("Saved deploy.conf: repo=%s domain=%s\n", repo, domain);
     const char *ok = "{\"ok\":true,\"message\":\"Deploy config saved\"}";
     send_response(client, 200, "OK", "application/json; charset=utf-8",
                   ok, (long)strlen(ok));

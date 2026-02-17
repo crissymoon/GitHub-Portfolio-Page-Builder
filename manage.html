@@ -365,11 +365,17 @@
 
   <!-- Deploy -->
   <h2>Deploy to GitHub Pages</h2>
-  <div style="display:-webkit-flex;display:flex;gap:0.5rem;margin-bottom:0.5rem;-webkit-flex-wrap:wrap;flex-wrap:wrap;">
-    <input type="text" id="deploy-repo-url" placeholder="https://github.com/user/repo.git" style="flex:1;-webkit-flex:1;min-width:250px;">
-    <button onclick="saveDeployConfig()">Save URL</button>
+  <div style="margin-bottom:0.75rem;">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:600;font-size:0.85rem;">GitHub Repo URL</label>
+    <input type="text" id="deploy-repo-url" placeholder="https://github.com/user/repo.git" oninput="updateLiveUrl()" style="width:100%;">
   </div>
-  <button class="primary-btn" onclick="deployPortfolio()">Deploy</button>
+  <div style="margin-bottom:0.75rem;">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:600;font-size:0.85rem;">Custom Domain (optional)</label>
+    <input type="text" id="deploy-domain" placeholder="example.com" oninput="updateLiveUrl()" style="width:100%;">
+  </div>
+  <div id="deploy-live-url" style="margin-bottom:0.75rem;font-size:0.85rem;color:#666;"></div>
+  <button class="primary-btn" onclick="saveDeployConfig()">Save Deploy Settings</button>
+  <button class="primary-btn" onclick="deployPortfolio()">Save, Build + Deploy</button>
   <span id="deploy-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
 
   <div id="output-area"></div>
@@ -715,6 +721,37 @@
 
     /* ---- Deploy ---- */
 
+    function deriveGitHubPagesUrl(repoUrl) {
+      /* https://github.com/user/repo.git -> https://user.github.io/repo/ */
+      /* https://github.com/user/user.github.io.git -> https://user.github.io/ */
+      var m = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
+      if (!m) return "";
+      var user = m[1];
+      var repo = m[2];
+      if (repo === user + ".github.io") {
+        return "https://" + user + ".github.io/";
+      }
+      return "https://" + user + ".github.io/" + repo + "/";
+    }
+
+    function updateLiveUrl() {
+      var repo = document.getElementById("deploy-repo-url").value.trim();
+      var domain = document.getElementById("deploy-domain").value.trim();
+      var el = document.getElementById("deploy-live-url");
+      if (domain) {
+        el.innerHTML = "Live URL: <a href=\"https://" + domain + "/\" target=\"_blank\" style=\"color:var(--mgr-primary);\">https://" + domain + "/</a>";
+      } else if (repo) {
+        var url = deriveGitHubPagesUrl(repo);
+        if (url) {
+          el.innerHTML = "Live URL: <a href=\"" + url + "\" target=\"_blank\" style=\"color:var(--mgr-primary);\"" + ">" + url + "</a>";
+        } else {
+          el.textContent = "";
+        }
+      } else {
+        el.textContent = "";
+      }
+    }
+
     function loadDeployConfig() {
       var xhr = new XMLHttpRequest();
       xhr.open("GET", "/api/deploy-config", true);
@@ -726,6 +763,10 @@
             if (cfg.repo) {
               document.getElementById("deploy-repo-url").value = cfg.repo;
             }
+            if (cfg.domain) {
+              document.getElementById("deploy-domain").value = cfg.domain;
+            }
+            updateLiveUrl();
           } catch (e) {}
         }
       };
@@ -733,13 +774,14 @@
     }
 
     function saveDeployConfig() {
-      var url = document.getElementById("deploy-repo-url").value.trim();
-      if (!url) {
+      var repo = document.getElementById("deploy-repo-url").value.trim();
+      if (!repo) {
         document.getElementById("deploy-status").textContent = "Enter a repo URL first.";
         return;
       }
+      var domain = document.getElementById("deploy-domain").value.trim();
       var status = document.getElementById("deploy-status");
-      status.textContent = "Saving config...";
+      status.textContent = "Saving deploy settings...";
 
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/deploy-config", true);
@@ -747,55 +789,93 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4) return;
         if (xhr.status === 200) {
-          status.textContent = "Deploy URL saved.";
+          status.textContent = "Deploy settings saved.";
+          updateLiveUrl();
           setTimeout(function () { status.textContent = ""; }, 3000);
         } else {
-          status.textContent = "Failed to save config.";
+          status.textContent = "Failed to save deploy settings.";
         }
       };
-      xhr.send(JSON.stringify({ repo: url }));
+      xhr.send(JSON.stringify({ repo: repo, domain: domain }));
     }
 
     function deployPortfolio() {
-      var url = document.getElementById("deploy-repo-url").value.trim();
-      if (!url) {
+      var repo = document.getElementById("deploy-repo-url").value.trim();
+      if (!repo) {
         document.getElementById("deploy-status").textContent = "Enter a GitHub Pages repo URL first.";
         return;
       }
+      var domain = document.getElementById("deploy-domain").value.trim();
       var status = document.getElementById("deploy-status");
 
-      /* Save config first, then deploy */
-      status.textContent = "Saving config...";
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/deploy-config", true);
-      xhr.setRequestHeader("Content-Type", "application/json");
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState !== 4) return;
-        if (xhr.status === 200) {
-          status.textContent = "Deploying... (this may take a moment)";
-          var xhr2 = new XMLHttpRequest();
-          xhr2.open("POST", "/api/deploy", true);
-          xhr2.timeout = 120000; /* 2 minute timeout for push */
-          xhr2.onreadystatechange = function () {
-            if (xhr2.readyState !== 4) return;
-            if (xhr2.status === 200) {
-              status.textContent = "Deploy complete. Site is live.";
-              setTimeout(function () { status.textContent = ""; }, 8000);
-            } else {
-              var msg = "Deploy failed.";
-              try { msg = JSON.parse(xhr2.responseText).error || msg; } catch (e) {}
-              status.textContent = msg;
-            }
-          };
-          xhr2.ontimeout = function () {
-            status.textContent = "Deploy timed out. Check terminal.";
-          };
-          xhr2.send();
-        } else {
-          status.textContent = "Failed to save config.";
+      /* Step 1: Save data */
+      collectFormData();
+      var json = JSON.stringify(data, null, 2);
+      status.textContent = "Saving data...";
+
+      var xhr1 = new XMLHttpRequest();
+      xhr1.open("POST", "/api/save", true);
+      xhr1.setRequestHeader("Content-Type", "application/json");
+      xhr1.onreadystatechange = function () {
+        if (xhr1.readyState !== 4) return;
+        if (xhr1.status !== 200) {
+          status.textContent = "Save failed. Deploy aborted.";
+          return;
         }
+
+        /* Step 2: Save deploy config */
+        status.textContent = "Saving deploy settings...";
+        var xhr2 = new XMLHttpRequest();
+        xhr2.open("POST", "/api/deploy-config", true);
+        xhr2.setRequestHeader("Content-Type", "application/json");
+        xhr2.onreadystatechange = function () {
+          if (xhr2.readyState !== 4) return;
+          if (xhr2.status !== 200) {
+            status.textContent = "Deploy config save failed.";
+            return;
+          }
+
+          /* Step 3: Build */
+          status.textContent = "Building...";
+          var xhr3 = new XMLHttpRequest();
+          xhr3.open("POST", "/api/build", true);
+          xhr3.onreadystatechange = function () {
+            if (xhr3.readyState !== 4) return;
+            if (xhr3.status !== 200) {
+              var msg = "Build failed.";
+              try { msg = JSON.parse(xhr3.responseText).error || msg; } catch (e) {}
+              status.textContent = msg;
+              return;
+            }
+
+            /* Step 4: Deploy */
+            status.textContent = "Deploying... (this may take a moment)";
+            var xhr4 = new XMLHttpRequest();
+            xhr4.open("POST", "/api/deploy", true);
+            xhr4.timeout = 120000;
+            xhr4.onreadystatechange = function () {
+              if (xhr4.readyState !== 4) return;
+              if (xhr4.status === 200) {
+                var liveUrl = domain ? "https://" + domain + "/" : deriveGitHubPagesUrl(repo);
+                status.textContent = "Deploy complete. Live at " + liveUrl;
+                updateLiveUrl();
+                setTimeout(function () { status.textContent = ""; }, 10000);
+              } else {
+                var msg = "Deploy failed.";
+                try { msg = JSON.parse(xhr4.responseText).error || msg; } catch (e) {}
+                status.textContent = msg;
+              }
+            };
+            xhr4.ontimeout = function () {
+              status.textContent = "Deploy timed out. Check terminal.";
+            };
+            xhr4.send();
+          };
+          xhr3.send();
+        };
+        xhr2.send(JSON.stringify({ repo: repo, domain: domain }));
       };
-      xhr.send(JSON.stringify({ repo: url }));
+      xhr1.send(json);
     }
 
     /* ---- Portfolio Image ---- */
