@@ -109,7 +109,14 @@
     var container = document.getElementById("projects-grid");
     if (!container || !data.projects) return;
 
-    var projects = data.projects;
+    /* Filter out empty projects (no title and no description) */
+    var projects = [];
+    for (var p = 0; p < data.projects.length; p++) {
+      var proj = data.projects[p];
+      if (proj.title || proj.description) {
+        projects.push(proj);
+      }
+    }
     var totalPages = Math.ceil(projects.length / PROJECTS_PER_PAGE);
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;

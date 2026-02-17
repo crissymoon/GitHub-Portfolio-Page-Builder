@@ -56,6 +56,16 @@
         "infrastructure",
         "development"
       ]
+    },
+    {
+      "id": 3,
+      "title": "This Page Itself :)",
+      "description": "This portfolio builder is written in C, Go, HTML, CSS, and Vanilla JS. It allows connecting to AI APIs to help with grammar checking and content addition. It includes a full CMS for building locally and pushing live to GitHub.",
+      "url": "https://github.com/crissymoon/GitHub-Portfolio-Page-Builder",
+      "tags": [
+        "ai-agent",
+        "portfolio"
+      ]
     }
   ],
   "links": [

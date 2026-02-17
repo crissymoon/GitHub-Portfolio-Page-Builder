@@ -80,26 +80,26 @@ a:hover {
 .site-image {
   display: block;
   width: 96px;
-  height: 96px;
+  height: auto;
   margin: 0 auto 1rem;
   border: none;
   border-radius: 0;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .site-image.site-image-small {
   width: 64px;
-  height: 64px;
+  height: auto;
 }
 
 .site-image.site-image-medium {
   width: 96px;
-  height: 96px;
+  height: auto;
 }
 
 .site-image.site-image-large {
   width: 160px;
-  height: 160px;
+  height: auto;
 }
 
 .site-header h1 {
