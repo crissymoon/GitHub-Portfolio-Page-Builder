@@ -665,6 +665,7 @@
     Portfolio Manager -- <a href="https://github.com/crissymoon/GitHub-Portfolio-Page-Builder" target="_blank">GitHub-Portfolio-Page-Builder</a>
   </footer>
 
+  <script src="beautify/beautify.js"></script>
   <script>
     var data = null;
 
@@ -1896,6 +1897,7 @@
     var agentHistory = [];
     var agentStreamDiv = null;
     var agentStreamBody = null;
+    var agentStreamExtractor = null;
 
     function agentAppendMsg(role, text) {
       var log = document.getElementById("agent-chat-log");
@@ -1908,6 +1910,23 @@
       var body = document.createElement("div");
       body.className = "agent-msg-body";
       body.textContent = text;
+      div.appendChild(body);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      return { div: div, body: body };
+    }
+
+    function agentAppendMsgHTML(role, html) {
+      var log = document.getElementById("agent-chat-log");
+      var div = document.createElement("div");
+      div.className = "agent-msg " + role;
+      var label = document.createElement("div");
+      label.className = "agent-msg-label";
+      label.textContent = role === "user" ? "You" : role === "agent" ? "Agent" : "System";
+      div.appendChild(label);
+      var body = document.createElement("div");
+      body.className = "agent-msg-body";
+      body.innerHTML = html;
       div.appendChild(body);
       log.appendChild(div);
       log.scrollTop = log.scrollHeight;
@@ -1947,22 +1966,60 @@
       var body = document.createElement("div");
       body.className = "agent-msg-body";
       div.appendChild(body);
+      var status = document.createElement("div");
+      status.className = "agent-stream-status";
+      status.style.cssText = "font-size:0.75rem;color:#888;margin-top:0.3rem;font-style:italic;";
+      div.appendChild(status);
       log.appendChild(div);
       agentStreamDiv = div;
       agentStreamBody = body;
       log.scrollTop = log.scrollHeight;
+
+      /* Create stream extractor to show only the explanation field */
+      if (typeof Beautify !== "undefined" && Beautify.createStreamExtractor) {
+        agentStreamExtractor = Beautify.createStreamExtractor({
+          field: "explanation",
+          onContent: function(text) {
+            body.textContent += text;
+            log.scrollTop = log.scrollHeight;
+          },
+          onOther: function(fieldName) {
+            if (fieldName === "data") {
+              status.textContent = "Applying changes...";
+            }
+          },
+          onDone: function() {
+            status.textContent = "";
+          }
+        });
+      } else {
+        agentStreamExtractor = null;
+      }
     }
 
     function agentStreamAppend(text) {
       if (!agentStreamBody) return;
-      agentStreamBody.textContent += text;
+      if (agentStreamExtractor) {
+        agentStreamExtractor.feed(text);
+      } else {
+        agentStreamBody.textContent += text;
+      }
       var log = document.getElementById("agent-chat-log");
       log.scrollTop = log.scrollHeight;
+      /* Keep the chat visible on the page */
+      agentStreamBody.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
 
     function agentEndStream() {
+      if (agentStreamExtractor) {
+        agentStreamExtractor.end();
+        agentStreamExtractor = null;
+      }
       if (agentStreamDiv) {
         agentStreamDiv.classList.remove("agent-streaming");
+        /* Remove status line */
+        var status = agentStreamDiv.querySelector(".agent-stream-status");
+        if (status) status.parentNode.removeChild(status);
       }
       agentStreamDiv = null;
       agentStreamBody = null;
@@ -2136,11 +2193,16 @@
         return;
       }
 
-      /* Replace streaming msg with just the explanation */
+      /* Replace streaming msg with formatted explanation */
       if (streamMsgDiv && streamMsgDiv.parentNode) {
         streamMsgDiv.parentNode.removeChild(streamMsgDiv);
       }
-      agentAppendMsg("agent", parsed.explanation || "Changes applied.");
+      var explanation = parsed.explanation || "Changes applied.";
+      if (typeof Beautify !== "undefined" && Beautify.formatForChat) {
+        agentAppendMsgHTML("agent", Beautify.formatForChat(explanation));
+      } else {
+        agentAppendMsg("agent", explanation);
+      }
 
       /* Restore the base64 image if it was placeholder */
       if (parsed.data.site && parsed.data.site.image === "[base64 image data omitted]") {
