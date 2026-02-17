@@ -196,8 +196,122 @@ static void send_file(sock_t client, const char *filepath) {
 
 /* ---- Request Handler ---- */
 
+/* Read the full request body of a given Content-Length */
+static char *read_request_body(sock_t client, const char *headers, int already_read, long *out_len) {
+    /* Find Content-Length */
+    const char *cl = strstr(headers, "Content-Length:");
+    if (!cl) cl = strstr(headers, "content-length:");
+    if (!cl) { *out_len = 0; return NULL; }
+    long content_length = atol(cl + 15);
+    if (content_length <= 0 || content_length > 10 * 1024 * 1024) { /* max 10MB */
+        *out_len = 0;
+        return NULL;
+    }
+
+    /* Find end of headers */
+    const char *body_start = strstr(headers, "\r\n\r\n");
+    if (!body_start) { *out_len = 0; return NULL; }
+    body_start += 4;
+    long header_len = (long)(body_start - headers);
+    long body_already = already_read - header_len;
+    if (body_already < 0) body_already = 0;
+
+    char *body = (char *)malloc(content_length + 1);
+    if (!body) { *out_len = 0; return NULL; }
+
+    /* Copy what we already have */
+    if (body_already > 0) {
+        if (body_already > content_length) body_already = content_length;
+        memcpy(body, body_start, body_already);
+    }
+
+    /* Read the rest */
+    long remaining = content_length - body_already;
+    long offset = body_already;
+    while (remaining > 0) {
+        int chunk = recv(client, body + offset, (int)remaining, 0);
+        if (chunk <= 0) break;
+        offset += chunk;
+        remaining -= chunk;
+    }
+    body[offset] = '\0';
+    *out_len = offset;
+    return body;
+}
+
+/* Handle POST /api/save - write JSON to crissy-data.json */
+static void handle_api_save(sock_t client, const char *headers, int headers_len) {
+    long body_len = 0;
+    char *body = read_request_body(client, headers, headers_len, &body_len);
+    if (!body || body_len == 0) {
+        send_error(client, 400, "Bad Request");
+        if (body) free(body);
+        return;
+    }
+
+    FILE *f = fopen("crissy-data.json", "wb");
+    if (!f) {
+        const char *msg = "{\"error\":\"Failed to write crissy-data.json\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        free(body);
+        return;
+    }
+    fwrite(body, 1, body_len, f);
+    fclose(f);
+    free(body);
+
+    printf("Saved crissy-data.json (%ld bytes)\n", body_len);
+
+    const char *ok = "{\"ok\":true,\"message\":\"Saved crissy-data.json\"}";
+    send_response(client, 200, "OK", "application/json; charset=utf-8", ok, (long)strlen(ok));
+}
+
+/* Handle POST /api/build - run the Go build tool */
+static void handle_api_build(sock_t client) {
+    int rc;
+    #ifdef _WIN32
+    /* Try portfolio-build.exe first, then go run */
+    struct stat st;
+    if (stat("portfolio-build.exe", &st) == 0) {
+        rc = system("portfolio-build.exe .");
+    } else if (stat("build.go", &st) == 0) {
+        rc = system("go run build.go .");
+    } else {
+        const char *msg = "{\"error\":\"No build tool found (portfolio-build.exe or build.go)\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    }
+    #else
+    struct stat st;
+    if (stat("portfolio-build", &st) == 0) {
+        rc = system("./portfolio-build .");
+    } else if (stat("build.go", &st) == 0) {
+        rc = system("go run build.go .");
+    } else {
+        const char *msg = "{\"error\":\"No build tool found (portfolio-build or build.go)\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+        return;
+    }
+    #endif
+
+    if (rc == 0) {
+        printf("Build completed successfully.\n");
+        const char *ok = "{\"ok\":true,\"message\":\"Build completed successfully\"}";
+        send_response(client, 200, "OK", "application/json; charset=utf-8", ok, (long)strlen(ok));
+    } else {
+        printf("Build failed with exit code %d.\n", rc);
+        const char *msg = "{\"error\":\"Build failed. Check terminal for details.\"}";
+        send_response(client, 500, "Internal Server Error",
+                      "application/json; charset=utf-8", msg, (long)strlen(msg));
+    }
+}
+
 static void handle_request(sock_t client) {
-    char buf[4096];
+    /* Use a larger buffer for POST bodies */
+    char buf[65536];
     int n = recv(client, buf, sizeof(buf) - 1, 0);
     if (n <= 0) return;
     buf[n] = '\0';
@@ -207,15 +321,29 @@ static void handle_request(sock_t client) {
     char raw_path[1024] = {0};
     sscanf(buf, "%15s %1023s", method, raw_path);
 
-    /* Only handle GET */
+    /* Strip query string */
+    char *qmark = strchr(raw_path, '?');
+    if (qmark) *qmark = '\0';
+
+    /* Handle POST endpoints */
+    if (strcmp(method, "POST") == 0) {
+        if (strcmp(raw_path, "/api/save") == 0) {
+            handle_api_save(client, buf, n);
+            return;
+        }
+        if (strcmp(raw_path, "/api/build") == 0) {
+            handle_api_build(client);
+            return;
+        }
+        send_error(client, 404, "Not Found");
+        return;
+    }
+
+    /* Only handle GET beyond this point */
     if (strcmp(method, "GET") != 0) {
         send_error(client, 405, "Method Not Allowed");
         return;
     }
-
-    /* Strip query string */
-    char *qmark = strchr(raw_path, '?');
-    if (qmark) *qmark = '\0';
 
     /* URL decode (basic: handle %XX) */
     char path[1024];

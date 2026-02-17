@@ -51,6 +51,28 @@
     el.textContent = data.site.title;
   }
 
+  /* ---- Rendering: Image & Favicon ---- */
+
+  function renderImage(data) {
+    var el = document.getElementById("site-image");
+    if (!el) return;
+    if (data.site && data.site.image) {
+      el.src = data.site.image;
+      el.alt = (data.site.title || "Portfolio") + " image";
+      el.style.display = "block";
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  function renderFavicon(data) {
+    var el = document.getElementById("favicon");
+    if (!el) return;
+    if (data.site && data.site.image) {
+      el.href = data.site.image;
+    }
+  }
+
   /* ---- Rendering: Updates ---- */
 
   function renderUpdates(data) {
@@ -221,6 +243,8 @@
     applyStyles(data);
     renderNotice(data);
     renderHeader(data);
+    renderImage(data);
+    renderFavicon(data);
     renderUpdates(data);
     renderProjects(data);
     renderInfo(data);

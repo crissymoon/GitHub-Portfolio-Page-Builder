@@ -77,6 +77,16 @@ a:hover {
   border-radius: 0;
 }
 
+.site-image {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 1rem;
+  border: 2px solid #fff;
+  border-radius: 0;
+  object-fit: cover;
+}
+
 .site-header h1 {
   font-family: var(--heading-font);
   font-weight: var(--heading-weight);

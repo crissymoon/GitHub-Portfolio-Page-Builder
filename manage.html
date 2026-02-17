@@ -219,9 +219,10 @@
   <div class="field-row">
     <label>OpenAI API Key (paste or load from .txt file)</label>
     <div class="api-key-row">
-      <input type="password" id="api-key-input" placeholder="sk-...">
+      <input type="password" id="api-key-input" placeholder="sk-..." oninput="saveApiKeyToCache()">
       <input type="file" id="api-key-file" accept=".txt">
       <button onclick="toggleKeyVisibility()">Show</button>
+      <button class="danger" onclick="clearApiKeyCache()">Clear</button>
     </div>
     <div class="field-row" style="margin-top:0.5rem">
       <label>Model</label>
@@ -237,6 +238,16 @@
   <div class="field-row">
     <label for="site-title">Title</label>
     <input type="text" id="site-title" value="">
+  </div>
+  <div class="field-row">
+    <label>Portfolio Image</label>
+    <div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:8px;flex-wrap:wrap;">
+      <input type="file" id="site-image-input" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" onchange="handleImageUpload(this)">
+      <button class="ai-btn" onclick="removePortfolioImage()" id="remove-image-btn" style="display:none;background:#c33;">Remove</button>
+    </div>
+    <div id="site-image-preview" style="margin-top:8px;display:none;">
+      <img id="site-image-thumb" src="" alt="Preview" style="width:64px;height:64px;object-fit:cover;border:1px solid #ccc;border-radius:0;">
+    </div>
   </div>
 
   <!-- Notice -->
@@ -323,9 +334,11 @@
 
   <!-- Actions -->
   <h2>Actions</h2>
-  <button class="primary-btn" onclick="saveData()">Save JSON</button>
+  <button class="primary-btn" onclick="saveToDisk()">Save</button>
+  <button class="primary-btn" onclick="buildPortfolio()">Build</button>
   <button onclick="downloadJSON()">Download JSON</button>
   <button onclick="viewPortfolio()">View Portfolio</button>
+  <span id="action-status" style="font-size:0.85rem;color:var(--mgr-primary);margin-left:0.5rem;"></span>
 
   <div id="output-area"></div>
 
@@ -382,6 +395,9 @@
       document.getElementById("info-name").value = data.info ? data.info.name || "" : "";
       document.getElementById("info-email").value = data.info ? data.info.email || "" : "";
       document.getElementById("info-bio").value = data.info ? data.info.bio || "" : "";
+
+      // Show portfolio image preview if one exists
+      showImagePreview(data.site && data.site.image ? data.site.image : "");
 
       renderSkills();
       renderProjects();
@@ -570,7 +586,67 @@
       var json = JSON.stringify(data, null, 2);
       var out = document.getElementById("output-area");
       out.style.display = "block";
-      out.textContent = "JSON saved (copy below or use Download):\n\n" + json;
+      out.textContent = "JSON output:\n\n" + json;
+    }
+
+    function saveToDisk() {
+      collectFormData();
+      var json = JSON.stringify(data, null, 2);
+      var status = document.getElementById("action-status");
+      status.textContent = "Saving...";
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/save", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          status.textContent = "Saved.";
+          setTimeout(function () { status.textContent = ""; }, 3000);
+        } else {
+          var msg = "Save failed.";
+          try { msg = JSON.parse(xhr.responseText).error || msg; } catch (e) {}
+          status.textContent = msg;
+        }
+      };
+      xhr.send(json);
+    }
+
+    function buildPortfolio() {
+      collectFormData();
+      var json = JSON.stringify(data, null, 2);
+      var status = document.getElementById("action-status");
+      status.textContent = "Saving...";
+
+      // Save first, then build
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/save", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          status.textContent = "Building...";
+          var xhr2 = new XMLHttpRequest();
+          xhr2.open("POST", "/api/build", true);
+          xhr2.onreadystatechange = function () {
+            if (xhr2.readyState !== 4) return;
+            if (xhr2.status === 200) {
+              status.textContent = "Build complete.";
+              setTimeout(function () { status.textContent = ""; }, 4000);
+            } else {
+              var msg = "Build failed.";
+              try { msg = JSON.parse(xhr2.responseText).error || msg; } catch (e) {}
+              status.textContent = msg;
+            }
+          };
+          xhr2.send();
+        } else {
+          var msg = "Save failed, build not started.";
+          try { msg = JSON.parse(xhr.responseText).error || msg; } catch (e) {}
+          status.textContent = msg;
+        }
+      };
+      xhr.send(json);
     }
 
     function downloadJSON() {
@@ -591,6 +667,42 @@
       window.open("index.html", "_blank");
     }
 
+    /* ---- Portfolio Image ---- */
+
+    function handleImageUpload(input) {
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var dataUrl = ev.target.result;
+        if (!data.site) data.site = {};
+        data.site.image = dataUrl;
+        showImagePreview(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removePortfolioImage() {
+      if (data.site) data.site.image = "";
+      showImagePreview("");
+      document.getElementById("site-image-input").value = "";
+    }
+
+    function showImagePreview(src) {
+      var preview = document.getElementById("site-image-preview");
+      var thumb = document.getElementById("site-image-thumb");
+      var removeBtn = document.getElementById("remove-image-btn");
+      if (src) {
+        thumb.src = src;
+        preview.style.display = "block";
+        removeBtn.style.display = "inline-block";
+      } else {
+        thumb.src = "";
+        preview.style.display = "none";
+        removeBtn.style.display = "none";
+      }
+    }
+
     /* ---- AI Content Generation ---- */
 
     var AI_SYSTEM_PROMPT = [
@@ -609,7 +721,26 @@
     ].join(" ");
 
     function getApiKey() {
-      return (document.getElementById("api-key-input").value || "").trim();
+      var val = (document.getElementById("api-key-input").value || "").trim();
+      if (!val) {
+        val = (localStorage.getItem("portfolio_mgr_api_key") || "").trim();
+        if (val) {
+          document.getElementById("api-key-input").value = val;
+        }
+      }
+      return val;
+    }
+
+    function saveApiKeyToCache() {
+      var val = (document.getElementById("api-key-input").value || "").trim();
+      if (val) {
+        localStorage.setItem("portfolio_mgr_api_key", val);
+      }
+    }
+
+    function clearApiKeyCache() {
+      localStorage.removeItem("portfolio_mgr_api_key");
+      document.getElementById("api-key-input").value = "";
     }
 
     function getModel() {
@@ -633,6 +764,12 @@
 
     // Load API key from a .txt file
     document.addEventListener("DOMContentLoaded", function () {
+      // Restore API key from browser cache if available
+      var cachedKey = (localStorage.getItem("portfolio_mgr_api_key") || "").trim();
+      if (cachedKey) {
+        document.getElementById("api-key-input").value = cachedKey;
+      }
+
       var fileInput = document.getElementById("api-key-file");
       if (fileInput) {
         fileInput.addEventListener("change", function (e) {
@@ -642,6 +779,7 @@
           reader.onload = function (ev) {
             var key = (ev.target.result || "").trim();
             document.getElementById("api-key-input").value = key;
+            saveApiKeyToCache();
           };
           reader.readAsText(file);
         });

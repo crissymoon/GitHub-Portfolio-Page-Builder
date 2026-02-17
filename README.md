@@ -1,6 +1,8 @@
 # Portfolio Manager
 
-A single-page portfolio system built with HTML, CSS, vanilla JavaScript, and a Go build tool. All content is driven by a single JSON data file. Fully responsive and compatible with older Safari versions.
+**Repository:** [https://github.com/crissymoon/GitHub-Portfolio-Page-Builder](https://github.com/crissymoon/GitHub-Portfolio-Page-Builder)
+
+A single-page portfolio system built with HTML, CSS, vanilla JavaScript, C, and Go. The C server runs cross-platform on Windows, macOS, and Linux with no runtime dependencies. The Go tool handles production builds. All content is driven by a single JSON data file. Fully responsive and compatible with older Safari versions.
 
 ---
 
@@ -33,6 +35,9 @@ A single-page portfolio system built with HTML, CSS, vanilla JavaScript, and a G
 ├── launch.sh           # macOS / Linux launcher (compiles and runs server)
 ├── launch.bat          # Windows launcher (compiles and runs server)
 ├── build.go            # Go CLI that inlines everything into static HTML
+├── cmds/               # Agent tool-call utilities
+│   ├── run.c           # Cross-platform command runner with approval gate
+│   └── README.md       # Documentation for the command runner
 └── build/              # Output directory (generated)
     ├── index.html
     ├── projects.html
@@ -282,6 +287,35 @@ This builds the portfolio and deploys the `build/` directory to the `gh-pages` b
 
 ---
 
+## Agent Command Runner
+
+The `cmds/` directory contains a cross-platform C tool called `run` that lets an AI agent execute terminal commands through a human approval gate. The agent sends a command, the operator sees exactly what will run, and nothing executes until the operator types `y`.
+
+### Build
+
+```sh
+cd cmds
+gcc -O2 -o run run.c
+```
+
+On macOS, if headers are not found:
+
+```sh
+cc -O2 -o run run.c --sysroot="$(xcrun --show-sdk-path)"
+```
+
+### Quick Example
+
+```sh
+./cmds/run ls -la
+```
+
+The tool prints the command for review, waits for approval, runs it if approved, and outputs a structured JSON result. It also supports `--json` mode for agent tool-call protocols (pipe `{"cmd": "..."}` on stdin) and `--log` for an append-only audit trail.
+
+See [cmds/README.md](cmds/README.md) for full documentation including flags, exit codes, output format, integration patterns, and security notes.
+
+---
+
 ## Color Theming
 
 Colors are defined in the `styles` section of `crissy-data.json`. The CSS uses custom properties (`--primary`, `--secondary`, etc.) that the JavaScript applies at runtime from the JSON data.
@@ -306,6 +340,7 @@ To add or remove output filenames (so all URLs resolve to the same page), edit t
 - **HTML5** -- semantic markup
 - **CSS3** -- custom properties, flexbox with webkit prefixes
 - **Vanilla JavaScript** -- ES5 compatible, no transpilation needed
+- **C** -- cross-platform local HTTP server, compiles on Windows (MSVC, MinGW), macOS, and Linux with no external libraries
 - **JSON** -- single data source
 - **Go** -- build tool for asset inlining
 
