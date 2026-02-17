@@ -288,14 +288,27 @@
       color: #888;
     }
     .agent-input-row {
+      position: relative;
       display: flex;
-      gap: 0.5rem;
     }
     .agent-input-row textarea {
       flex: 1;
       margin-bottom: 0;
-      min-height: 40px;
+      min-height: 44px;
       resize: vertical;
+      padding-right: 70px;
+    }
+    .agent-input-row button {
+      position: absolute;
+      right: 1px;
+      bottom: 1px;
+      top: 1px;
+      margin: 0;
+      border: none;
+      border-left: 1px solid var(--mgr-border);
+      padding: 0 0.75rem;
+      font-size: 0.85rem;
+      height: auto;
     }
     .agent-deploy-prompt {
       margin-top: 0.75rem;
