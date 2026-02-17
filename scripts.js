@@ -117,6 +117,14 @@
         projects.push(proj);
       }
     }
+
+    /* Sort by displayOrder */
+    projects.sort(function (a, b) {
+      var oa = (typeof a.displayOrder === "number") ? a.displayOrder : 9999;
+      var ob = (typeof b.displayOrder === "number") ? b.displayOrder : 9999;
+      return oa - ob;
+    });
+
     var totalPages = Math.ceil(projects.length / PROJECTS_PER_PAGE);
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
@@ -211,6 +219,20 @@
       html += "<li>" + escapeHtml(data.info.skills[i]) + "</li>";
     }
     el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Education & Technical Background ---- */
+
+  function renderEducation(data) {
+    var el = document.getElementById("education-block");
+    var section = document.getElementById("education-section");
+    if (!el || !section) return;
+    if (!data.education || !data.education.showOnPortfolio || !data.education.summary) {
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+    el.innerHTML = "<p>" + escapeHtml(data.education.summary) + "</p>";
   }
 
   /* ---- Rendering: Links ---- */
@@ -308,6 +330,7 @@
     renderProjects(data);
     renderInfo(data);
     renderSkills(data);
+    renderEducation(data);
     renderLinks(data);
     renderSupportLink(data);
   }

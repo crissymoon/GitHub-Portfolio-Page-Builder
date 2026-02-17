@@ -39,6 +39,7 @@
   "projects": [
     {
       "id": 1,
+      "displayOrder": 1,
       "title": "lainc.io",
       "description": "Tutorials and technical reference platform.",
       "url": "https://lainc.io/",
@@ -49,6 +50,7 @@
     },
     {
       "id": 2,
+      "displayOrder": 2,
       "title": "XcaliburMoon",
       "description": "Personal infrastructure and development projects.",
       "url": "https://xcaliburmoon.net/",
@@ -59,6 +61,7 @@
     },
     {
       "id": 3,
+      "displayOrder": 3,
       "title": "This Page Itself :)",
       "description": "This portfolio builder is written in C, Go, HTML, CSS, and Vanilla JS. It allows connecting to AI APIs to help with grammar checking and content addition. It includes a full CMS for building locally and pushing live to GitHub.",
       "url": "https://github.com/crissymoon/GitHub-Portfolio-Page-Builder",
@@ -68,11 +71,24 @@
       ]
     }
   ],
-  "supportLink": {
-    "url": "",
-    "label": ""
+  "education": {
+    "summary": "I am a full stack dev with solid hands on experience across web, mobile, and desktop apps. I have an EPA cert from a technical engineering program, plus a background in tech focused business development and consulting with an innovation angle, professional writing training, and an IT degree. I am currently working on a Bachelor of Computer Science and plan to keep going into a PhD focused on AI. Overall, I mix real world build experience with ongoing deep dives into advanced CS topics.",
+    "showOnPortfolio": true
   },
-  "socials": [],
+  "supportLink": {
+    "url": "https://square.link/u/0MsDz4Gz",
+    "label": "Help support me with a coffee"
+  },
+  "socials": [
+    {
+      "platform": "LinkedIn",
+      "url": "https://www.linkedin.com/in/crissy-deutsch-062a6b272/"
+    },
+    {
+      "platform": "YouTube",
+      "url": "https://www.youtube.com/@xcaliburmoon"
+    }
+  ],
   "links": [
     {
       "label": "lainc.io",

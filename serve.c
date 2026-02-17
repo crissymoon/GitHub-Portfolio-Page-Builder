@@ -770,11 +770,95 @@ int main(int argc, char *argv[]) {
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr.sin_port = htons((unsigned short)port);
 
-    if (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKERR) {
-        fprintf(stderr, "Failed to bind to port %d. It may be in use.\n", port);
-        CLOSESOCKET(server_sock);
-        platform_cleanup();
-        return 1;
+    while (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKERR) {
+        fprintf(stderr, "\nPort %d is already in use.\n\n", port);
+        fprintf(stderr, "  [k] Kill the process using port %d and retry\n", port);
+        fprintf(stderr, "  [d] Choose a different port\n");
+        fprintf(stderr, "  [q] Quit\n\n");
+        fprintf(stderr, "Choice: ");
+        fflush(stderr);
+
+        char choice[16];
+        if (!fgets(choice, sizeof(choice), stdin)) {
+            CLOSESOCKET(server_sock);
+            platform_cleanup();
+            return 1;
+        }
+
+        if (choice[0] == 'q' || choice[0] == 'Q') {
+            CLOSESOCKET(server_sock);
+            platform_cleanup();
+            return 0;
+        } else if (choice[0] == 'k' || choice[0] == 'K') {
+            /* Kill the process occupying the port */
+            char kill_cmd[256];
+            #ifdef _WIN32
+            snprintf(kill_cmd, sizeof(kill_cmd),
+                "for /f \"tokens=5\" %%%%a in ('netstat -aon ^| findstr :%d') do taskkill /F /PID %%%%a >nul 2>&1", port);
+            #elif defined(__APPLE__)
+            snprintf(kill_cmd, sizeof(kill_cmd),
+                "lsof -ti tcp:%d | xargs kill -9 2>/dev/null", port);
+            #else
+            snprintf(kill_cmd, sizeof(kill_cmd),
+                "fuser -k %d/tcp 2>/dev/null", port);
+            #endif
+            int ret = system(kill_cmd);
+            if (ret != 0) {
+                fprintf(stderr, "Could not kill process on port %d (may need sudo).\n", port);
+            } else {
+                fprintf(stderr, "Killed process on port %d. Retrying...\n", port);
+            }
+            /* Small delay to let the OS release the port */
+            #ifdef _WIN32
+            Sleep(500);
+            #else
+            usleep(500000);
+            #endif
+            /* Recreate socket since the old one may be in a bad state */
+            CLOSESOCKET(server_sock);
+            server_sock = socket(AF_INET, SOCK_STREAM, 0);
+            if (server_sock == INVALID_SOCK) {
+                fprintf(stderr, "Failed to create socket.\n");
+                platform_cleanup();
+                return 1;
+            }
+            #ifdef _WIN32
+            setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
+            #else
+            setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+            #endif
+        } else if (choice[0] == 'd' || choice[0] == 'D') {
+            fprintf(stderr, "Enter new port: ");
+            fflush(stderr);
+            char port_buf[16];
+            if (!fgets(port_buf, sizeof(port_buf), stdin)) {
+                CLOSESOCKET(server_sock);
+                platform_cleanup();
+                return 1;
+            }
+            int new_port = atoi(port_buf);
+            if (new_port <= 0 || new_port > 65535) {
+                fprintf(stderr, "Invalid port number.\n");
+                continue;
+            }
+            port = new_port;
+            addr.sin_port = htons((unsigned short)port);
+            /* Recreate socket for the new port */
+            CLOSESOCKET(server_sock);
+            server_sock = socket(AF_INET, SOCK_STREAM, 0);
+            if (server_sock == INVALID_SOCK) {
+                fprintf(stderr, "Failed to create socket.\n");
+                platform_cleanup();
+                return 1;
+            }
+            #ifdef _WIN32
+            setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
+            #else
+            setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+            #endif
+        } else {
+            fprintf(stderr, "Invalid choice. Enter k, d, or q.\n");
+        }
     }
 
     if (listen(server_sock, 16) == SOCKERR) {

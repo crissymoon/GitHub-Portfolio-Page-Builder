@@ -305,6 +305,25 @@ a:hover {
   margin-bottom: 2.5rem;
 }
 
+/* === EDUCATION & TECHNICAL BACKGROUND === */
+.education-section {
+  margin-bottom: 2.5rem;
+}
+
+.education-block {
+  background-color: var(--secondary);
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--primary);
+  border-radius: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.education-block p {
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
 .links-list {
   list-style: none;
   padding: 0;
@@ -327,6 +346,71 @@ a:hover {
 
 .links-list a:hover {
   border-bottom-color: var(--primary);
+  text-decoration: none;
+}
+
+/* === SOCIAL LINKS === */
+.socials-bar {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.socials-bar li {
+  display: inline-block;
+}
+
+.socials-bar a {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 0;
+  text-decoration: none;
+  -webkit-transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.socials-bar a:hover {
+  background-color: var(--background);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* === SUPPORT / BUY ME A COFFEE === */
+.support-link-wrap {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.support-link {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: var(--harmony-2);
+  border: 2px solid var(--harmony-2);
+  border-radius: 0;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  -webkit-transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.support-link:hover {
+  background-color: var(--background);
+  color: var(--harmony-2);
   text-decoration: none;
 }
 
@@ -394,6 +478,7 @@ a:hover {
   <header class="site-header">
     <img id="site-image" class="site-image" src="" alt="" style="display:none;">
     <h1 id="site-title">Crissy Deutsch Portfolio</h1>
+    <ul class="socials-bar" id="socials-bar"></ul>
   </header>
 
   <!-- Main Content -->
@@ -419,11 +504,20 @@ a:hover {
       <ul class="skills-list" id="skills-list"></ul>
     </section>
 
+    <!-- Education & Technical Background -->
+    <section class="education-section" id="education-section" style="display:none;">
+      <h2 class="section-title">Education &amp; Technical Background</h2>
+      <div class="education-block" id="education-block"></div>
+    </section>
+
     <!-- Links -->
     <section class="links-section">
       <h2 class="section-title">Links</h2>
       <ul class="links-list" id="links-list"></ul>
     </section>
+
+    <!-- Support Link -->
+    <div class="support-link-wrap" id="support-link-wrap"></div>
 
   </main>
 
@@ -474,6 +568,7 @@ var __CRISSY_DATA__ = {
   "projects": [
     {
       "id": 1,
+      "displayOrder": 1,
       "title": "lainc.io",
       "description": "Tutorials and technical reference platform.",
       "url": "https://lainc.io/",
@@ -484,6 +579,7 @@ var __CRISSY_DATA__ = {
     },
     {
       "id": 2,
+      "displayOrder": 2,
       "title": "XcaliburMoon",
       "description": "Personal infrastructure and development projects.",
       "url": "https://xcaliburmoon.net/",
@@ -494,6 +590,7 @@ var __CRISSY_DATA__ = {
     },
     {
       "id": 3,
+      "displayOrder": 3,
       "title": "This Page Itself :)",
       "description": "This portfolio builder is written in C, Go, HTML, CSS, and Vanilla JS. It allows connecting to AI APIs to help with grammar checking and content addition. It includes a full CMS for building locally and pushing live to GitHub.",
       "url": "https://github.com/crissymoon/GitHub-Portfolio-Page-Builder",
@@ -501,6 +598,24 @@ var __CRISSY_DATA__ = {
         "ai-agent",
         "portfolio"
       ]
+    }
+  ],
+  "education": {
+    "summary": "I am a full stack dev with solid hands on experience across web, mobile, and desktop apps. I have an EPA cert from a technical engineering program, plus a background in tech focused business development and consulting with an innovation angle, professional writing training, and an IT degree. I am currently working on a Bachelor of Computer Science and plan to keep going into a PhD focused on AI. Overall, I mix real world build experience with ongoing deep dives into advanced CS topics.",
+    "showOnPortfolio": true
+  },
+  "supportLink": {
+    "url": "https://square.link/u/0MsDz4Gz",
+    "label": "Help support me with a coffee"
+  },
+  "socials": [
+    {
+      "platform": "LinkedIn",
+      "url": "https://www.linkedin.com/in/crissy-deutsch-062a6b272/"
+    },
+    {
+      "platform": "YouTube",
+      "url": "https://www.youtube.com/@xcaliburmoon"
     }
   ],
   "links": [
@@ -641,6 +756,14 @@ var __CRISSY_DATA__ = {
         projects.push(proj);
       }
     }
+
+    /* Sort by displayOrder */
+    projects.sort(function (a, b) {
+      var oa = (typeof a.displayOrder === "number") ? a.displayOrder : 9999;
+      var ob = (typeof b.displayOrder === "number") ? b.displayOrder : 9999;
+      return oa - ob;
+    });
+
     var totalPages = Math.ceil(projects.length / PROJECTS_PER_PAGE);
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
@@ -737,6 +860,20 @@ var __CRISSY_DATA__ = {
     el.innerHTML = html;
   }
 
+  /* ---- Rendering: Education & Technical Background ---- */
+
+  function renderEducation(data) {
+    var el = document.getElementById("education-block");
+    var section = document.getElementById("education-section");
+    if (!el || !section) return;
+    if (!data.education || !data.education.showOnPortfolio || !data.education.summary) {
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+    el.innerHTML = "<p>" + escapeHtml(data.education.summary) + "</p>";
+  }
+
   /* ---- Rendering: Links ---- */
 
   function renderLinks(data) {
@@ -749,6 +886,42 @@ var __CRISSY_DATA__ = {
       html += '<li><a href="' + escapeHtml(lnk.url) + '">' + escapeHtml(lnk.label) + "</a></li>";
     }
     el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Social Links ---- */
+
+  function renderSocials(data) {
+    var el = document.getElementById("socials-bar");
+    if (!el) return;
+    if (!data.socials || !data.socials.length) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    var html = "";
+    for (var i = 0; i < data.socials.length; i++) {
+      var s = data.socials[i];
+      if (s.platform && s.url) {
+        html += '<li><a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener">' + escapeHtml(s.platform) + "</a></li>";
+      }
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---- Rendering: Support / Buy Me a Coffee ---- */
+
+  function renderSupportLink(data) {
+    var el = document.getElementById("support-link-wrap");
+    if (!el) return;
+    if (!data.supportLink || !data.supportLink.url) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    var label = data.supportLink.label || "Buy This Dev a Cup of Coffee";
+    el.innerHTML = '<a class="support-link" href="' + escapeHtml(data.supportLink.url) + '" target="_blank" rel="noopener">' + escapeHtml(label) + "</a>";
   }
 
   /* ---- Rendering: CSS Variables from JSON ---- */
@@ -791,11 +964,14 @@ var __CRISSY_DATA__ = {
     renderHeader(data);
     renderImage(data);
     renderFavicon(data);
+    renderSocials(data);
     renderUpdates(data);
     renderProjects(data);
     renderInfo(data);
     renderSkills(data);
+    renderEducation(data);
     renderLinks(data);
+    renderSupportLink(data);
   }
 
   function init() {
