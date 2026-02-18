@@ -4,6 +4,16 @@
 
 A single-page portfolio system built with HTML, CSS, vanilla JavaScript, C, and Go. The C server runs cross-platform on Windows, macOS, and Linux with no runtime dependencies. The Go tool handles production builds. All content is driven by a single JSON data file. Fully responsive and compatible with older Safari versions.
 
+## Build Output Notes
+
+The build generates four identical HTML files (index, projects, links, about) because this project was converted from an older portfolio that had separate routes. Some external docs and bookmarks still point at those paths, so the build keeps the extra files to preserve those links.
+
+If you want only a single index.html:
+
+1. Open [crissy-data.json](crissy-data.json) and set `site.outputFiles` to `["index.html"]`.
+2. Run the build tool again.
+3. Optionally delete the extra files from the [build/](build/) folder.
+
 ---
 
 ## Features
