@@ -29,11 +29,20 @@
       "Python",
       "Linux",
       "Networking",
-      "Security",
       "PHP",
       "C",
       "React",
-      "Vite"
+      "Vite",
+      "Automation",
+      "TypeScript",
+      "Advanced Web Development",
+      "Full Stack Development",
+      "APIs",
+      "Scalable Architecture Design",
+      "AI Engineer",
+      "MCP + RAG Specialist",
+      "Rust",
+      "C17, C23"
     ]
   },
   "projects": [
@@ -98,7 +107,7 @@
     }
   ],
   "education": {
-    "summary": "I am a full stack dev with solid hands on experience across web, mobile, and desktop apps. I have an EPA cert from a technical engineering program, plus a background in tech focused business development and consulting with an innovation angle, professional writing training, and an IT degree. I am currently working on a Bachelor of Computer Science and plan to keep going into a PhD focused on AI. Overall, I mix real world build experience with ongoing deep dives into advanced CS topics.",
+    "summary": "Some will sell you a template and call it a solution. I build the thing that makes that template obsolete.\n\nI architect custom AI and NLP systems from the ground up, using advanced RAG implementations, CNNs, and purpose-built models designed around your actual data, your actual workflows, and your actual competitive reality. Not a subscription. Not a demo that never quite fits. A proprietary system engineered for your specific problems.\n\nHere is what that looks like in practice: deep technical architecture paired with a vetted network of execution specialists who know how to ship. You get full transparency into how your system works, because a tool you cannot understand is a liability, not an asset.\n\nThe organizations I work with stop asking \"why is the AI doing that\" and start asking \"how do we scale this.\"\n\nYour competitors are running the same commodity tools from the same vendors. That gap between what they have and what is actually possible is exactly where I operate.\n\nIf you are evaluating whether custom AI is worth the investment, that question alone is worth a conversation. Most people who ask it already know the answer.\n\nSend me an email. We will figure out whether what I build is what you need.",
     "showOnPortfolio": true
   },
   "supportLink": {

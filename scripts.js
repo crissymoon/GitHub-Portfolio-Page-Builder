@@ -232,7 +232,31 @@
       return;
     }
     section.style.display = "";
-    el.innerHTML = "<p>" + escapeHtml(data.education.summary) + "</p>";
+    var paragraphs = data.education.summary.split(/\n+/);
+    var html = "";
+    for (var p = 0; p < paragraphs.length; p++) {
+      var trimmed = paragraphs[p].replace(/^\s+|\s+$/g, "");
+      if (trimmed) {
+        html += "<p>" + escapeHtml(trimmed) + "</p>";
+      }
+    }
+    el.innerHTML = html;
+
+    /* Trim and pull together animation on viewport enter */
+    el.className = "education-block education-ready";
+    if (typeof IntersectionObserver !== "undefined") {
+      var observer = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            el.className = "education-block education-animate";
+            observer.disconnect();
+          }
+        }
+      }, { threshold: 0.1 });
+      observer.observe(section);
+    } else {
+      el.className = "education-block";
+    }
   }
 
   /* ---- Rendering: Links ---- */
@@ -340,10 +364,23 @@
       if (err) {
         var main = document.querySelector(".main-content");
         if (main) main.innerHTML = "<p>Error loading portfolio data.</p>";
+        hideLoadingScreen();
         return;
       }
       renderAll(data);
+      hideLoadingScreen();
     });
+  }
+
+  function hideLoadingScreen() {
+    var screen = document.getElementById("loading-screen");
+    if (!screen) return;
+    screen.className = "loading-screen loading-fade-out";
+    setTimeout(function () {
+      if (screen.parentNode) {
+        screen.parentNode.removeChild(screen);
+      }
+    }, 450);
   }
 
   /* Wait for DOM */

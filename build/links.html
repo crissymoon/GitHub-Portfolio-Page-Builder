@@ -31,6 +31,59 @@
   --border-radius: 0px;
 }
 
+/* === LOADING SCREEN === */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--background);
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  z-index: 9999;
+  -webkit-transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease;
+}
+
+.loading-screen.loading-fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--secondary);
+  border-top: 3px solid var(--primary);
+  -webkit-animation: loadingSpin 0.8s linear infinite;
+  animation: loadingSpin 0.8s linear infinite;
+}
+
+@-webkit-keyframes loadingSpin {
+  0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+}
+
+@keyframes loadingSpin {
+  0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 1rem;
+  font-family: var(--body-font);
+  font-size: 0.95rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
 /* === BASE === */
 html {
   font-size: var(--base-size);
@@ -324,6 +377,59 @@ a:hover {
   color: var(--text);
 }
 
+/* Education: trim and pull together animation */
+.education-block.education-ready {
+  opacity: 0;
+  line-height: 2.8;
+  letter-spacing: 0.18em;
+  word-spacing: 0.35em;
+  -webkit-transform: scale(1.03);
+  transform: scale(1.03);
+}
+
+.education-block.education-animate {
+  -webkit-animation: trimPullTogether 1.2s ease forwards;
+  animation: trimPullTogether 1.2s ease forwards;
+}
+
+@-webkit-keyframes trimPullTogether {
+  0% {
+    opacity: 0;
+    line-height: 2.8;
+    letter-spacing: 0.18em;
+    word-spacing: 0.35em;
+    -webkit-transform: scale(1.03);
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    line-height: 1.6;
+    letter-spacing: 0;
+    word-spacing: 0;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+@keyframes trimPullTogether {
+  0% {
+    opacity: 0;
+    line-height: 2.8;
+    letter-spacing: 0.18em;
+    word-spacing: 0.35em;
+    -webkit-transform: scale(1.03);
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    line-height: 1.6;
+    letter-spacing: 0;
+    word-spacing: 0;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
 .links-list {
   list-style: none;
   padding: 0;
@@ -471,6 +577,12 @@ a:hover {
 </head>
 <body>
 
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading</p>
+  </div>
+
   <!-- Notice Bar -->
   <div class="notice-bar" id="notice-bar"></div>
 
@@ -558,11 +670,20 @@ var __CRISSY_DATA__ = {
       "Python",
       "Linux",
       "Networking",
-      "Security",
       "PHP",
       "C",
       "React",
-      "Vite"
+      "Vite",
+      "Automation",
+      "TypeScript",
+      "Advanced Web Development",
+      "Full Stack Development",
+      "APIs",
+      "Scalable Architecture Design",
+      "AI Engineer",
+      "MCP + RAG Specialist",
+      "Rust",
+      "C17, C23"
     ]
   },
   "projects": [
@@ -627,7 +748,7 @@ var __CRISSY_DATA__ = {
     }
   ],
   "education": {
-    "summary": "I am a full stack dev with solid hands on experience across web, mobile, and desktop apps. I have an EPA cert from a technical engineering program, plus a background in tech focused business development and consulting with an innovation angle, professional writing training, and an IT degree. I am currently working on a Bachelor of Computer Science and plan to keep going into a PhD focused on AI. Overall, I mix real world build experience with ongoing deep dives into advanced CS topics.",
+    "summary": "Some will sell you a template and call it a solution. I build the thing that makes that template obsolete.\n\nI architect custom AI and NLP systems from the ground up, using advanced RAG implementations, CNNs, and purpose-built models designed around your actual data, your actual workflows, and your actual competitive reality. Not a subscription. Not a demo that never quite fits. A proprietary system engineered for your specific problems.\n\nHere is what that looks like in practice: deep technical architecture paired with a vetted network of execution specialists who know how to ship. You get full transparency into how your system works, because a tool you cannot understand is a liability, not an asset.\n\nThe organizations I work with stop asking \"why is the AI doing that\" and start asking \"how do we scale this.\"\n\nYour competitors are running the same commodity tools from the same vendors. That gap between what they have and what is actually possible is exactly where I operate.\n\nIf you are evaluating whether custom AI is worth the investment, that question alone is worth a conversation. Most people who ask it already know the answer.\n\nSend me an email. We will figure out whether what I build is what you need.",
     "showOnPortfolio": true
   },
   "supportLink": {
@@ -897,7 +1018,31 @@ var __CRISSY_DATA__ = {
       return;
     }
     section.style.display = "";
-    el.innerHTML = "<p>" + escapeHtml(data.education.summary) + "</p>";
+    var paragraphs = data.education.summary.split(/\n+/);
+    var html = "";
+    for (var p = 0; p < paragraphs.length; p++) {
+      var trimmed = paragraphs[p].replace(/^\s+|\s+$/g, "");
+      if (trimmed) {
+        html += "<p>" + escapeHtml(trimmed) + "</p>";
+      }
+    }
+    el.innerHTML = html;
+
+    /* Trim and pull together animation on viewport enter */
+    el.className = "education-block education-ready";
+    if (typeof IntersectionObserver !== "undefined") {
+      var observer = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            el.className = "education-block education-animate";
+            observer.disconnect();
+          }
+        }
+      }, { threshold: 0.1 });
+      observer.observe(section);
+    } else {
+      el.className = "education-block";
+    }
   }
 
   /* ---- Rendering: Links ---- */
@@ -1005,10 +1150,23 @@ var __CRISSY_DATA__ = {
       if (err) {
         var main = document.querySelector(".main-content");
         if (main) main.innerHTML = "<p>Error loading portfolio data.</p>";
+        hideLoadingScreen();
         return;
       }
       renderAll(data);
+      hideLoadingScreen();
     });
+  }
+
+  function hideLoadingScreen() {
+    var screen = document.getElementById("loading-screen");
+    if (!screen) return;
+    screen.className = "loading-screen loading-fade-out";
+    setTimeout(function () {
+      if (screen.parentNode) {
+        screen.parentNode.removeChild(screen);
+      }
+    }, 450);
   }
 
   /* Wait for DOM */
