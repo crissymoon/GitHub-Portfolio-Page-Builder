@@ -78,32 +78,6 @@
         "ai-agent",
         "portfolio"
       ]
-    },
-    {
-      "id": 4,
-      "displayOrder": 4,
-      "title": "howdymail.net",
-      "description": "Email infrastructure and automation setup for marketing teams. I configure deliverability focused sending, list hygiene, segmentation, and behavior based journeys, then connect analytics so campaigns can be measured and improved over time.",
-      "url": "https://howdymail.net/",
-      "tags": [
-        "marketing",
-        "email",
-        "automation",
-        "analytics"
-      ]
-    },
-    {
-      "id": 5,
-      "displayOrder": 5,
-      "title": "Marketing Plans That Work",
-      "description": "Data driven marketing plans built on an emotional intelligence framework. I audit pages, identify conversion leaks, and align brand messaging to user intent. Behavior based segmentation and precise targeting replace guesswork with measurable outcomes.",
-      "url": "https://avacorp.org/",
-      "tags": [
-        "marketing",
-        "strategy",
-        "analytics",
-        "conversion"
-      ]
     }
   ],
   "education": {

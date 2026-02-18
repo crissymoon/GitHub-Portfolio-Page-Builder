@@ -1720,7 +1720,7 @@
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
       doc.text(name, pageW / 2, y, { align: "center" });
-      y += 20;
+      y += 24;
 
       /* Contact line */
       var contactParts = [];
@@ -1731,7 +1731,7 @@
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.text(contactParts.join("  |  "), pageW / 2, y, { align: "center" });
-        y += 12;
+        y += 16;
       }
 
       /* Social links line */
@@ -1747,12 +1747,18 @@
           var socialLines = wrapText(socialParts.join("  |  "), usable, 8);
           for (var sl = 0; sl < socialLines.length; sl++) {
             doc.text(socialLines[sl], pageW / 2, y, { align: "center" });
-            y += 10;
+            y += 12;
           }
         }
       }
 
-      y += 10;
+      y += 14;
+
+      /* Horizontal rule under header */
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageW - margin, y);
+      y += 14;
 
       /* ---- Sections ---- */
 
@@ -1761,16 +1767,20 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Summary", margin, y);
-        y += 13;
+        y += 6;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var bioLines = wrapText(data.info.bio, usable, 9);
         for (var b = 0; b < bioLines.length; b++) {
           if (y > 720) break;
           doc.text(bioLines[b], margin, y);
-          y += 12;
+          y += 13;
         }
-        y += 8;
+        y += 14;
       }
 
       /* Education */
@@ -1778,16 +1788,20 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Education & Technical Background", margin, y);
-        y += 13;
+        y += 6;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var eduLines = wrapText(data.education.summary, usable, 9);
         for (var e = 0; e < eduLines.length; e++) {
           if (y > 720) break;
           doc.text(eduLines[e], margin, y);
-          y += 12;
+          y += 13;
         }
-        y += 8;
+        y += 14;
       }
 
       /* Skills */
@@ -1795,7 +1809,11 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Skills", margin, y);
-        y += 13;
+        y += 6;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         var skillsText = data.info.skills.join(", ");
@@ -1803,9 +1821,9 @@
         for (var sk = 0; sk < skillLines.length; sk++) {
           if (y > 720) break;
           doc.text(skillLines[sk], margin, y);
-          y += 12;
+          y += 13;
         }
-        y += 8;
+        y += 14;
       }
 
       /* Projects (max 3) */
@@ -1827,7 +1845,11 @@
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
           doc.text("Projects", margin, y);
-          y += 13;
+          y += 6;
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(margin, y, pageW - margin, y);
+          y += 12;
           for (var pi = 0; pi < showCount; pi++) {
             if (y > 700) break;
             var proj = validProjects[pi];
@@ -1835,45 +1857,27 @@
             doc.setFontSize(9);
             var projTitle = proj.title || "Untitled";
             if (proj.url) projTitle += "  (" + proj.url + ")";
-            doc.text(projTitle, margin + 8, y);
-            y += 12;
+            doc.text(projTitle, margin, y);
+            y += 14;
             if (proj.description) {
               doc.setFont("helvetica", "normal");
               doc.setFontSize(9);
-              var descLines = wrapText(proj.description, usable - 16, 9);
+              var descLines = wrapText(proj.description, usable, 9);
               for (var dl = 0; dl < descLines.length; dl++) {
                 if (y > 720) break;
-                doc.text(descLines[dl], margin + 8, y);
-                y += 12;
+                doc.text(descLines[dl], margin, y);
+                y += 13;
               }
             }
-            y += 4;
+            y += 10;
           }
           if (validProjects.length > maxProjects && portfolioUrl) {
             doc.setFont("helvetica", "italic");
             doc.setFontSize(8);
-            doc.text("Visit " + portfolioUrl + " to view more projects and the live portfolio.", margin + 8, y);
-            y += 12;
+            doc.text("Visit " + portfolioUrl + " to view more projects and the live portfolio.", margin, y);
+            y += 14;
           }
-          y += 8;
-        }
-      }
-
-      /* Links */
-      if (data.links && data.links.length > 0) {
-        if (y < 700) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(11);
-          doc.text("Links", margin, y);
-          y += 13;
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(9);
-          for (var li = 0; li < data.links.length; li++) {
-            if (y > 720) break;
-            var lnk = data.links[li];
-            doc.text((lnk.label || "") + ": " + (lnk.url || ""), margin + 8, y);
-            y += 12;
-          }
+          y += 14;
         }
       }
 
