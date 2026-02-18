@@ -14,7 +14,8 @@ A single-page portfolio system built with HTML, CSS, vanilla JavaScript, C, and 
 - **Manager interface** -- a browser-based editor (`manage.html`) for modifying all content, colors, skills, projects, and links without touching code
 - **Collapsible sections** -- every section in the manager collapses and expands with descriptions, plus an Expand All / Collapse All toggle
 - **AI content generation** -- built-in OpenAI integration for generating notice text, bios, and project descriptions
-- **Portfolio agent** -- a chat interface that uses AI to edit your portfolio via natural language, preview changes, and deploy
+- **Portfolio agent** -- a chat interface that uses AI to edit your portfolio via natural language, preview changes, and deploy with streaming that filters out raw JSON and shows only the explanation in real time
+- **Beautify module** -- cross-platform text and code beautifier (browser JS and native C) for formatting JSON, HTML, CSS, and streaming AI output
 - **Social links** -- add GitHub, LinkedIn, Twitter, and other social media links displayed in the portfolio header
 - **Support link** -- optional Buy Me a Coffee style donation link on the portfolio
 - **Education section** -- togglable education and technical background summary on the portfolio
@@ -48,6 +49,10 @@ A single-page portfolio system built with HTML, CSS, vanilla JavaScript, C, and 
 ├── launch.bat          # Windows launcher (compiles and runs server)
 ├── agent/              # Portfolio agent documentation
 │   └── README.txt      # Agent usage and privacy notes
+├── beautify/           # Cross-platform text and code beautifier
+│   ├── beautify.js     # Browser and Node.js module (ES5, no dependencies)
+│   ├── beautify.c      # Native C command-line tool
+│   └── README.md       # Documentation for the beautify module
 ├── deploy/             # GitHub Pages deploy tool
 │   ├── deploy.c        # Clone-based deploy with CNAME preservation (C)
 │   └── README.md       # Documentation for the deploy tool
@@ -430,6 +435,50 @@ domain=yourdomain.com
 Or configure it from the manager's Deploy section, which saves this file automatically.
 
 See [deploy/README.md](deploy/README.md) for full documentation.
+
+---
+
+## Beautify Module
+
+The `beautify/` directory contains a cross-platform text and code beautifier available as both a browser/Node.js module and a native C command-line tool. The portfolio agent uses the JS module to filter streaming API output so the user sees only the explanation text in real time instead of raw JSON.
+
+### JavaScript (Browser and Node.js)
+
+Include the script in a page or require it in Node.js:
+
+```html
+<script src="beautify/beautify.js"></script>
+```
+
+Key functions:
+
+| Function | Description |
+|---|---|
+| `Beautify.json(src)` | Format JSON with indentation |
+| `Beautify.html(src)` | Format HTML with indentation |
+| `Beautify.css(src)` | Format CSS with indentation |
+| `Beautify.extractField(src, key)` | Extract a top-level string field from JSON |
+| `Beautify.auto(src)` | Auto-detect format and beautify |
+| `Beautify.formatForChat(text)` | Convert text with code blocks to styled HTML |
+| `Beautify.createStreamExtractor(opts)` | Parse streaming JSON and extract a single field in real time |
+
+The stream extractor is used by the portfolio agent to show only the `explanation` field while the `data` field streams silently in the background.
+
+### C Command-Line Tool
+
+```sh
+cd beautify
+cc -O2 -o beautify beautify.c --sysroot="$(xcrun --show-sdk-path)"
+```
+
+```sh
+echo '{"a":1,"b":[2,3]}' | ./beautify --json
+./beautify --extract-field explanation response.json
+./beautify --html page.html
+./beautify --css styles.css
+```
+
+See [beautify/README.md](beautify/README.md) for full documentation.
 
 ---
 
