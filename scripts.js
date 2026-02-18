@@ -214,9 +214,13 @@
     var el = document.getElementById("skills-list");
     if (!el || !data.info || !data.info.skills) return;
 
+    var sorted = data.info.skills.slice().sort(function (a, b) {
+      return a.toLowerCase().localeCompare(b.toLowerCase());
+    });
+
     var html = "";
-    for (var i = 0; i < data.info.skills.length; i++) {
-      html += "<li>" + escapeHtml(data.info.skills[i]) + "</li>";
+    for (var i = 0; i < sorted.length; i++) {
+      html += "<li>" + escapeHtml(sorted[i]) + "</li>";
     }
     el.innerHTML = html;
   }

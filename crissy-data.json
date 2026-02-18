@@ -122,16 +122,16 @@
     {
       "platform": "YouTube",
       "url": "https://www.youtube.com/@xcaliburmoon"
+    },
+    {
+      "platform": "GitHub",
+      "url": "https://github.com/crissymoon"
     }
   ],
   "links": [
     {
-      "label": "lainc.io",
+      "label": "Leto's Angels - We focus on creating real opportunities without putting anyone on front-street. It's all about making a positive impact without the noise.",
       "url": "https://lainc.io/"
-    },
-    {
-      "label": "Email",
-      "url": "mailto:Crissy@XcaliburMoon.Net"
     }
   ],
   "styles": {

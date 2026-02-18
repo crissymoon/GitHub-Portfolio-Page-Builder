@@ -763,16 +763,16 @@ var __CRISSY_DATA__ = {
     {
       "platform": "YouTube",
       "url": "https://www.youtube.com/@xcaliburmoon"
+    },
+    {
+      "platform": "GitHub",
+      "url": "https://github.com/crissymoon"
     }
   ],
   "links": [
     {
-      "label": "lainc.io",
+      "label": "Leto's Angels - We focus on creating real opportunities without putting anyone on front-street. It's all about making a positive impact without the noise.",
       "url": "https://lainc.io/"
-    },
-    {
-      "label": "Email",
-      "url": "mailto:Crissy@XcaliburMoon.Net"
     }
   ],
   "styles": {
@@ -1000,9 +1000,13 @@ var __CRISSY_DATA__ = {
     var el = document.getElementById("skills-list");
     if (!el || !data.info || !data.info.skills) return;
 
+    var sorted = data.info.skills.slice().sort(function (a, b) {
+      return a.toLowerCase().localeCompare(b.toLowerCase());
+    });
+
     var html = "";
-    for (var i = 0; i < data.info.skills.length; i++) {
-      html += "<li>" + escapeHtml(data.info.skills[i]) + "</li>";
+    for (var i = 0; i < sorted.length; i++) {
+      html += "<li>" + escapeHtml(sorted[i]) + "</li>";
     }
     el.innerHTML = html;
   }
